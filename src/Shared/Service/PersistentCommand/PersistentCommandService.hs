@@ -5,6 +5,7 @@ import Control.Monad (forever, unless, void, when)
 import Control.Monad.Reader (ask, liftIO)
 import Data.Aeson (Value (..))
 import Data.Foldable (traverse_)
+import Data.IORef (writeIORef)
 import qualified Data.List as L
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
@@ -53,6 +54,7 @@ runPersistentCommand
   -> m ()
 runPersistentCommand runRequestContextWithRequestContext' updateContext execute force commandSimple = do
   context <- ask
+  liftIO $ writeIORef context.breadcrumbs' []
   updatedContext <- updateContext commandSimple context
   executePersistentCommandByUuid runRequestContextWithRequestContext' execute force commandSimple.uuid updatedContext
 

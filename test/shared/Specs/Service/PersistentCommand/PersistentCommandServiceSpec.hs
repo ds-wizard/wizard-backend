@@ -2,7 +2,9 @@ module Specs.Service.PersistentCommand.PersistentCommandServiceSpec where
 
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.IORef
 import Data.Pool (withResource)
+import Data.Time
 import qualified Data.UUID as U
 import Database.PostgreSQL.Simple
 import Test.Hspec
@@ -19,6 +21,7 @@ import Shared.Model.Locale.Locale
 import Shared.Model.PersistentCommand.PersistentCommand
 import Shared.Model.PersistentCommand.Project.RefreshProjectCacheCommand
 import Shared.Model.PersistentCommand.Trigger.TriggerEntityUuidCommand
+import Shared.Model.Sentry.SentryEvent
 import Shared.Service.PersistentCommand.PersistentCommandMapper
 import Shared.Service.PersistentCommand.WizardPersistentCommandService
 import Shared.Util.Date
@@ -38,6 +41,18 @@ persistentCommandServiceSpec requestContext =
         -- THEN:
         (Right command) <- runInContext (findPersistentCommandByUuid deleteLocaleCommand.uuid :: RequestContextM (PersistentCommand U.UUID)) requestContext
         command.state `shouldBe` DonePersistentCommandState
+
+    it "runs a command without the breadcrumbs of the runner" $
+      -- GIVEN:
+      do
+        now <- getCurrentTime
+        writeIORef requestContext.breadcrumbs [SentryBreadcrumb {timestamp = now, level = "info", category = "Runner", message = "Before the command"}]
+        runInContextIO (insertPersistentCommand deleteLocaleCommand) requestContext
+        -- WHEN:
+        (Right ()) <- runInContext runPersistentCommands' requestContext
+        -- THEN:
+        breadcrumbs <- readIORef requestContext.breadcrumbs
+        fmap (.message) breadcrumbs `shouldNotContain` ["Before the command"]
 
     it "does not run a command that another runner is already running" $
       -- GIVEN:

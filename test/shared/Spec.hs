@@ -145,6 +145,7 @@ import Specs.Util.ListSpec
 import Specs.Util.LocaleCodeSpec
 import Specs.Util.MapSpec
 import Specs.Util.MathSpec
+import Specs.Util.SentrySpec
 import Specs.Util.StringSpec
 import Specs.Util.TokenSpec
 import TestMigration
@@ -279,6 +280,7 @@ main =
               mathSpec
               listSpec
               httpSpec
+              sentrySpec
               stringSpec
               tokenSpec
               jinjaSpec

@@ -8,7 +8,7 @@ import Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.CaseInsensitive as CI
 import qualified Data.HashMap.Strict as HashMap
-import Data.IORef (IORef, modifyIORef')
+import Data.IORef (IORef, readIORef, writeIORef)
 import qualified Data.List as L
 import Data.Maybe (isJust, mapMaybe, maybeToList)
 import qualified Data.Text as T
@@ -57,7 +57,8 @@ breadcrumbMessageLimit = 1000
 addBreadcrumb :: IORef [SentryBreadcrumb] -> SentryBreadcrumb -> IO ()
 addBreadcrumb buffer breadcrumb = do
   let message = take breadcrumbMessageLimit breadcrumb.message
-  length message `seq` modifyIORef' buffer (take breadcrumbLimit . (breadcrumb {message = message} :))
+  breadcrumbs <- take breadcrumbLimit . ((breadcrumb {message = message} :: SentryBreadcrumb) :) <$> readIORef buffer
+  length message `seq` length breadcrumbs `seq` writeIORef buffer breadcrumbs
 
 toBreadcrumbsInterface :: [SentryBreadcrumb] -> [(String, Value)]
 toBreadcrumbsInterface [] = []
