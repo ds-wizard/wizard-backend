@@ -11,6 +11,7 @@ import Specs.Api.Handler.Project.Detail_DocumentContext_GET
 import Specs.Api.Handler.Project.Detail_Documents_GET
 import Specs.Api.Handler.Project.Detail_Documents_Preview_GET
 import Specs.Api.Handler.Project.Detail_GET
+import Specs.Api.Handler.Project.Detail_Name_PUT
 import Specs.Api.Handler.Project.Detail_Preview_GET
 import Specs.Api.Handler.Project.Detail_Questionnaire_GET
 import Specs.Api.Handler.Project.Detail_Report_GET
@@ -43,6 +44,7 @@ projectAPI serverContext requestContext =
       detail_preview_GET requestContext
       detail_settings_GET requestContext
       detail_settings_PUT requestContext
+      detail_name_PUT requestContext
       detail_DELETE requestContext
       detail_content_PUT requestContext
       detail_report_GET requestContext

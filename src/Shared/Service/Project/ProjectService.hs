@@ -18,6 +18,7 @@ import Shared.Api.Resource.Project.ProjectContentChangeDTO
 import Shared.Api.Resource.Project.ProjectCreateDTO
 import Shared.Api.Resource.Project.ProjectCreateFromTemplateDTO
 import Shared.Api.Resource.Project.ProjectDTO
+import Shared.Api.Resource.Project.ProjectNameChangeDTO
 import Shared.Api.Resource.Project.ProjectSettingsChangeDTO
 import Shared.Api.Resource.Project.ProjectShareChangeDTO
 import Shared.Api.Resource.User.UserDTO
@@ -355,32 +356,13 @@ modifyProjectShare projectUuid reqDto =
     al_updateProject project updatedProject
     al_updateProjectPermissions project updatedProject
     updatePermsForOnlineUsers projectUuid
-    permissionDtos <- traverse enhanceProjectPerm updatedProject.permissions
     skipIfAssigningProject
       project
       ( catchError
           (sendProjectInvitationMail project updatedProject)
           (\errMessage -> throwError $ GeneralServerError _ERROR_SERVICE_PROJECT__INVITATION_EMAIL_NOT_SENT)
       )
-    mDt <-
-      case updatedProject.documentTemplateUuid of
-        Just dtUuid -> do
-          dt <- findDocumentTemplateByUuid dtUuid
-          formats <- findDocumentTemplateFormats dtUuid
-          return . Just $ STM.toDTO dt formats
-        _ -> return Nothing
-    mFormat <-
-      case (updatedProject.documentTemplateUuid, updatedProject.formatUuid) of
-        (Just dtUuid, Just formatUuid) -> do
-          format <- findDocumentTemplateFormatByDocumentTemplateIdAndUuid dtUuid formatUuid
-          return $ Just format
-        _ -> return Nothing
-    projectEvents <- findProjectEventListsByProjectUuid projectUuid
-    let projectContent = compileProjectEvents projectEvents
-    unresolvedCommentCounts <- findProjectCommentThreadsSimple projectUuid False True
-    resolvedCommentCounts <- findProjectCommentThreadsSimple projectUuid True True
-    let restWsDto = toDetailWsDTO updatedProject mDt mFormat permissionDtos projectContent.labels unresolvedCommentCounts resolvedCommentCounts
-    setProject projectUuid restWsDto
+    setProjectForOnlineUsers updatedProject
     return reqDto
 
 modifyProjectSettingsIfChanged :: WizardRequestContextC s m => Project -> ProjectSettingsChangeDTO -> m ()
@@ -400,28 +382,43 @@ modifyProjectSettings projectUuid reqDto =
     let updatedProject = fromSettingsChangeDTO project reqDto hasPermission now
     updateProjectByUuid updatedProject
     al_updateProject project updatedProject
-    permissionDtos <- traverse enhanceProjectPerm updatedProject.permissions
     deleteTemporalDocumentsByProjectUuid project.uuid
-    mTemplate <-
-      case updatedProject.documentTemplateUuid of
-        Just tId -> do
-          tml <- findDocumentTemplateByUuid tId
-          formats <- findDocumentTemplateFormats tId
-          return . Just $ STM.toDTO tml formats
-        _ -> return Nothing
-    mFormat <-
-      case (updatedProject.documentTemplateUuid, updatedProject.formatUuid) of
-        (Just dtId, Just formatUuid) -> do
-          format <- findDocumentTemplateFormatByDocumentTemplateIdAndUuid dtId formatUuid
-          return $ Just format
-        _ -> return Nothing
-    projectEvents <- findProjectEventListsByProjectUuid projectUuid
-    let projectContent = compileProjectEvents projectEvents
-    unresolvedCommentCounts <- findProjectCommentThreadsSimple projectUuid False True
-    resolvedCommentCounts <- findProjectCommentThreadsSimple projectUuid True True
-    let restWsDto = toDetailWsDTO updatedProject mTemplate mFormat permissionDtos projectContent.labels unresolvedCommentCounts resolvedCommentCounts
-    setProject projectUuid restWsDto
+    setProjectForOnlineUsers updatedProject
     return reqDto
+
+modifyProjectName :: WizardRequestContextC s m => U.UUID -> ProjectNameChangeDTO -> m ProjectNameChangeDTO
+modifyProjectName projectUuid reqDto =
+  runInTransaction $ do
+    project <- findProjectByUuid projectUuid
+    skipIfAssigningProject project (checkOwnerPermissionToProject project.workspaceUuid project.visibility project.permissions)
+    validateProjectNameChangeDTO reqDto
+    now <- liftIO getCurrentTimeInMicroseconds
+    let updatedProject = project {name = reqDto.name, updatedAt = now} :: Project
+    updateProjectByUuid updatedProject
+    al_updateProject project updatedProject
+    deleteTemporalDocumentsByProjectUuid project.uuid
+    setProjectForOnlineUsers updatedProject
+    return reqDto
+
+setProjectForOnlineUsers :: WizardRequestContextC s m => Project -> m ()
+setProjectForOnlineUsers project = do
+  permissionDtos <- traverse enhanceProjectPerm project.permissions
+  mTemplate <-
+    case project.documentTemplateUuid of
+      Just dtUuid -> do
+        dt <- findDocumentTemplateByUuid dtUuid
+        formats <- findDocumentTemplateFormats dtUuid
+        return . Just $ STM.toDTO dt formats
+      _ -> return Nothing
+  mFormat <-
+    case (project.documentTemplateUuid, project.formatUuid) of
+      (Just dtUuid, Just formatUuid) -> Just <$> findDocumentTemplateFormatByDocumentTemplateIdAndUuid dtUuid formatUuid
+      _ -> return Nothing
+  projectEvents <- findProjectEventListsByProjectUuid project.uuid
+  let projectContent = compileProjectEvents projectEvents
+  unresolvedCommentCounts <- findProjectCommentThreadsSimple project.uuid False True
+  resolvedCommentCounts <- findProjectCommentThreadsSimple project.uuid True True
+  setProject project.uuid (toDetailWsDTO project mTemplate mFormat permissionDtos projectContent.labels unresolvedCommentCounts resolvedCommentCounts)
 
 checkDeletePermissionToProject :: WizardRequestContextC s m => U.UUID -> m ()
 checkDeletePermissionToProject projectUuid = do

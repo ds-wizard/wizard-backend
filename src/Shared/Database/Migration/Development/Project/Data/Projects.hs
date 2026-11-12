@@ -10,6 +10,7 @@ import Shared.Api.Resource.Project.ProjectContentChangeDTO
 import Shared.Api.Resource.Project.ProjectContentDTO
 import Shared.Api.Resource.Project.ProjectCreateDTO
 import Shared.Api.Resource.Project.ProjectDTO
+import Shared.Api.Resource.Project.ProjectNameChangeDTO
 import Shared.Api.Resource.Project.ProjectSettingsChangeDTO
 import Shared.Api.Resource.Project.ProjectShareChangeDTO
 import Shared.Constant.Workspace
@@ -169,6 +170,9 @@ project1SettingsChange =
     , isTemplate = project1SettingsEdited.isTemplate
     , language = Nothing
     }
+
+project1NameChange :: ProjectNameChangeDTO
+project1NameChange = ProjectNameChangeDTO {name = project1SettingsEdited.name}
 
 project1AlbertEditProjectPerm :: ProjectPerm
 project1AlbertEditProjectPerm =

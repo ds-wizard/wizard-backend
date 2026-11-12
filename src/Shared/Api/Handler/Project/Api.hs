@@ -10,6 +10,7 @@ import Shared.Api.Handler.Project.Detail_DocumentContext_GET
 import Shared.Api.Handler.Project.Detail_Documents_GET
 import Shared.Api.Handler.Project.Detail_Documents_Preview_GET
 import Shared.Api.Handler.Project.Detail_GET
+import Shared.Api.Handler.Project.Detail_Name_PUT
 import Shared.Api.Handler.Project.Detail_Preview_GET
 import Shared.Api.Handler.Project.Detail_Questionnaire_GET
 import Shared.Api.Handler.Project.Detail_Report_GET
@@ -43,6 +44,7 @@ type ProjectAPI =
            :<|> Detail_Settings_GET
            :<|> Detail_Settings_PUT
            :<|> Detail_Share_PUT
+           :<|> Detail_Name_PUT
            :<|> Detail_DELETE
            :<|> Detail_Content_PUT
            :<|> Detail_Report_GET
@@ -76,6 +78,7 @@ projectServer =
     :<|> detail_settings_GET
     :<|> detail_settings_PUT
     :<|> detail_share_PUT
+    :<|> detail_name_PUT
     :<|> detail_DELETE
     :<|> detail_content_PUT
     :<|> detail_report_GET

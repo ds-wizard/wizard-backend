@@ -11,6 +11,8 @@ import Network.HTTP.Types.Status (ok200)
 import Test.Hspec hiding (shouldBe)
 import Test.Hspec.Expectations.Pretty
 
+import Shared.Api.Resource.Project.ProjectNameChangeDTO
+import Shared.Api.Resource.Project.ProjectNameChangeJM ()
 import Shared.Api.Resource.Websocket.ProjectMessageDTO
 import Shared.Api.Resource.Websocket.WebsocketActionDTO
 import Shared.Database.DAO.Package.KnowledgeModelPackageDAO
@@ -31,32 +33,43 @@ import Specs.Api.Handler.Websocket.Common
 import Specs.Common
 
 setProjectSpec requestContext =
-  describe "setProjectSpec" $
-    test200 requestContext
+  describe "setProjectSpec" $ do
+    create_test_200
+      "WS 200 OK (settings)"
+      requestContext
+      project10
+      "settings"
+      (encode project10EditedSettingsChange)
+    create_test_200
+      "WS 200 OK (name)"
+      requestContext
+      (project10 {documentTemplateUuid = Nothing, formatUuid = Nothing} :: Project)
+      "name"
+      (encode $ ProjectNameChangeDTO {name = project10EditedSettings.name})
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------
 -- ----------------------------------------------------
-test200 requestContext =
-  it "WS 200 OK" $
+create_test_200 title requestContext project urlSuffix reqBody =
+  it title $
     -- GIVEN: Prepare database
     do
       runInContext U.runMigration requestContext
       runInContextIO TML_Migration.runMigration requestContext
       runInContextIO (insertPackage germanyKmPackage) requestContext
       runInContextIO (traverse_ insertPackageEvent germanyKmPackageEvents) requestContext
-      runInContextIO (insertProject project10) requestContext
+      runInContextIO (insertProject project) requestContext
       runInContextIO (insertProject project7) requestContext
       -- AND: Connect to websocket
-      ((c1, s1), (c2, s2), (c3, s3)) <- connectTestWebsocketUsers requestContext project10.uuid
+      ((c1, s1), (c2, s2), (c3, s3)) <- connectTestWebsocketUsers requestContext project.uuid
       ((c4, s4), (c5, s5), (c6, s6)) <- connectTestWebsocketUsers requestContext project7.uuid
       -- AND: Prepare request
       let request =
             HttpRequest
               { requestMethod = "PUT"
-              , requestUrl = "/api/projects/" ++ U.toString project10.uuid ++ "/settings"
+              , requestUrl = "/api/projects/" ++ U.toString project.uuid ++ "/" ++ urlSuffix
               , requestHeaders = M.fromList [("Authorization", "Bearer " ++ reqAuthToken), ("Content-Type", "application/json")]
-              , requestBody = BSL.toStrict . encode $ project10EditedSettingsChange
+              , requestBody = BSL.toStrict reqBody
               , multipart = Nothing
               }
       -- AND: Prepare expectation

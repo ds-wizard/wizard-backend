@@ -1,6 +1,6 @@
 module Shared.Service.Project.ProjectValidation where
 
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.Except (throwError)
 import Data.Foldable (forM_, traverse_)
 import qualified Data.Map.Strict as M
@@ -8,6 +8,7 @@ import qualified Data.UUID as U
 import Text.Regex.TDFA
 
 import Shared.Api.Resource.Project.Acl.ProjectPermChangeDTO
+import Shared.Api.Resource.Project.ProjectNameChangeDTO
 import Shared.Api.Resource.Project.ProjectSettingsChangeDTO
 import Shared.Api.Resource.Project.ProjectShareChangeDTO
 import Shared.Database.DAO.DocumentTemplate.DocumentTemplateDAO
@@ -21,6 +22,7 @@ import Shared.Model.Project.Acl.ProjectPerm
 import Shared.Model.User.UserGroup
 import Shared.Service.DocumentTemplate.Locale.DocumentTemplateLocaleValidation
 import Shared.Service.Workspace.WorkspaceScopeService
+import Shared.Util.String (trim)
 
 validateProjectSettingsChangeDTO :: WizardRequestContextC s m => U.UUID -> ProjectSettingsChangeDTO -> m ()
 validateProjectSettingsChangeDTO workspaceUuid reqDto = do
@@ -29,6 +31,10 @@ validateProjectSettingsChangeDTO workspaceUuid reqDto = do
     tml <- findDocumentTemplateByUuid dtUuid
     checkTemplateWorkspace workspaceUuid tml.workspaceUuid
     validateLanguageAvailability tml reqDto.documentTemplateLanguage
+
+validateProjectNameChangeDTO :: WizardRequestContextC s m => ProjectNameChangeDTO -> m ()
+validateProjectNameChangeDTO reqDto =
+  when (null (trim reqDto.name)) (throwError $ ValidationError [] (M.singleton "name" [_ERROR_VALIDATION__FIELDS_ABSENCE]))
 
 validateProjectShareChangeDTO :: WizardRequestContextC s m => U.UUID -> ProjectShareChangeDTO -> m ()
 validateProjectShareChangeDTO workspaceUuid reqDto = forM_ reqDto.permissions validateMember
