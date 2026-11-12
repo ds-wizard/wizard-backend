@@ -88,6 +88,22 @@ test_400 requestContext = do
     response `shouldRespondWith` responseMatcher
     -- AND: Find result in DB and compare with expectation state
     assertExistenceOfWorkspaceInDB requestContext defaultWorkspace
+  it "HTTP 400 BAD REQUEST when the primary color is not a hex color" $ do
+    -- GIVEN: Prepare request
+    let reqBody = encode (workspaceChange {primaryColor = Just "#12345"} :: WorkspaceChangeDTO)
+    -- AND: Prepare expectation
+    let expStatus = 400
+    let expHeaders = resCtHeader : resCorsHeaders
+    let expDto = ValidationError [] (M.singleton "primaryColor" [_ERROR_VALIDATION__INVALID_COLOR "#12345"])
+    let expBody = encode expDto
+    -- WHEN: Call API
+    response <- request reqMethod reqUrl reqHeaders reqBody
+    -- THEN: Compare response with expectation
+    let responseMatcher =
+          ResponseMatcher {matchHeaders = expHeaders, matchStatus = expStatus, matchBody = bodyEquals expBody}
+    response `shouldRespondWith` responseMatcher
+    -- AND: Find result in DB and compare with expectation state
+    assertExistenceOfWorkspaceInDB requestContext defaultWorkspace
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------

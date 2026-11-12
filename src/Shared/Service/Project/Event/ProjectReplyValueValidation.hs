@@ -31,7 +31,7 @@ isValidValue DateTimeQuestionValueType = isJust . readDateTime
 isValidValue TimeQuestionValueType = isJust . readTime
 isValidValue EmailQuestionValueType = isEmail
 isValidValue UrlQuestionValueType = isUrl
-isValidValue ColorQuestionValueType = matchesPosixRegex "^#[0-9a-fA-F]{6}$"
+isValidValue ColorQuestionValueType = isHexColor
 isValidValue _ = const True
 
 passes :: String -> QuestionValidation -> Bool

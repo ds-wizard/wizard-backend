@@ -28,6 +28,9 @@ isEmail = matchesPosixRegex "^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$"
 isUrl :: String -> Bool
 isUrl = maybe False ((`elem` ["http:", "https:"]) . uriScheme) . parseAbsoluteURI
 
+isHexColor :: String -> Bool
+isHexColor = matchesPosixRegex "^#[0-9a-fA-F]{6}$"
+
 matchesPosixRegex :: String -> String -> Bool
 matchesPosixRegex regex value = either (const False) (`matchTest` value) (compilePosixRegex regex)
 

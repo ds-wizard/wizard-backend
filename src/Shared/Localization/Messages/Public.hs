@@ -54,6 +54,8 @@ _ERROR_VALIDATION__FIELDS_ABSENCE =
 
 _ERROR_VALIDATION__ABSENCE value = LocaleRecord "error.validation.absence" "No matching data found: %s" [value]
 
+_ERROR_VALIDATION__INVALID_COLOR value = LocaleRecord "error.validation.invalid_color" "'%s' is not a hex color code" [value]
+
 _ERROR_VALIDATION__EVENT_BATCH_SIZE limit =
   LocaleRecord "error.validation.event_batch_size" "A batch can contain at most %s events" [show limit]
 

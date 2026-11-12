@@ -46,6 +46,7 @@ import Shared.Service.Workspace.WorkspaceScopeService
 import Shared.Util.Date (getCurrentTimeInMicroseconds)
 import Shared.Util.String (trim)
 import Shared.Util.Uuid
+import Shared.Util.ValueFormat (isHexColor)
 
 getWorkspacesPage :: WizardRequestContextC s m => Maybe String -> Pageable -> [Sort] -> m (Page Workspace)
 getWorkspacesPage mQuery pageable sort = do
@@ -178,5 +179,10 @@ createWorkspaceWithRoles workspace = do
   return (workspaceWithDefault, adminRole)
 
 validateChangeDto :: WizardRequestContextC s m => WorkspaceChangeDTO -> m ()
-validateChangeDto reqDto =
+validateChangeDto reqDto = do
   when (null (trim reqDto.name)) (throwError $ ValidationError [] (M.singleton "name" [_ERROR_VALIDATION__FIELDS_ABSENCE]))
+  traverse_ validatePrimaryColor reqDto.primaryColor
+
+validatePrimaryColor :: WizardRequestContextC s m => String -> m ()
+validatePrimaryColor color =
+  unless (isHexColor color) (throwError $ ValidationError [] (M.singleton "primaryColor" [_ERROR_VALIDATION__INVALID_COLOR color]))

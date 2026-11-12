@@ -122,6 +122,24 @@ test_400 requestContext = do
     response `shouldRespondWith` responseMatcher
     -- AND: Find result in DB and compare with expectation state
     assertCountInDB findWorkspaces requestContext 1
+  it "HTTP 400 BAD REQUEST when the primary color is not a hex color" $ do
+    -- GIVEN: Prepare request
+    let reqBody = encode (workspaceCreate {primaryColor = Just "not-a-color"} :: WorkspaceChangeDTO)
+    -- AND: Prepare expectation
+    let expStatus = 400
+    let expHeaders = resCtHeader : resCorsHeaders
+    let expDto = ValidationError [] (M.singleton "primaryColor" [_ERROR_VALIDATION__INVALID_COLOR "not-a-color"])
+    let expBody = encode expDto
+    -- AND: Run migrations
+    enableMultiWorkspace requestContext
+    -- WHEN: Call API
+    response <- request reqMethod reqUrl reqHeaders reqBody
+    -- THEN: Compare response with expectation
+    let responseMatcher =
+          ResponseMatcher {matchHeaders = expHeaders, matchStatus = expStatus, matchBody = bodyEquals expBody}
+    response `shouldRespondWith` responseMatcher
+    -- AND: Find result in DB and compare with expectation state
+    assertCountInDB findWorkspaces requestContext 1
   it "HTTP 400 BAD REQUEST when the tenant is single-workspace" $ do
     -- GIVEN: Prepare expectation
     let expStatus = 400
