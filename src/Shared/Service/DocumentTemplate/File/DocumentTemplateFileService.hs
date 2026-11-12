@@ -44,6 +44,7 @@ createFile :: WizardRequestContextC s m => U.UUID -> DocumentTemplateFileChangeD
 createFile dtUuid reqDto =
   runInTransaction $ do
     checkEditorPermissionToDocumentTemplate dtUuid
+    validateFileName reqDto.fileName
     validateFileAndAssetUniqueness Nothing dtUuid reqDto.fileName
     fUuid <- liftIO generateUuid
     tenantUuid <- asks (.tenantUuid')
@@ -60,6 +61,7 @@ modifyFile fileUuid reqDto =
     checkPermission _DOCUMENT_TEMPLATE_EDITORS_USE_ROLE_PERMISSION
     file <- findFileByUuid fileUuid
     checkEditorPermissionToDocumentTemplate file.documentTemplateUuid
+    validateFileName reqDto.fileName
     validateFileAndAssetUniqueness (Just file.uuid) file.documentTemplateUuid reqDto.fileName
     now <- liftIO getCurrentTimeInMicroseconds
     let updatedFile = fromChangeDTO reqDto file.documentTemplateUuid file.uuid file.tenantUuid file.createdAt now

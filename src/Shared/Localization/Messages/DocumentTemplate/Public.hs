@@ -9,6 +9,10 @@ import Shared.Model.Localization.LocaleRecord
 _ERROR_VALIDATION__DOC_TML_ID_UNIQUENESS tmlId =
   LocaleRecord "error.validation.tml_id_uniqueness" "DocumentTemplate '%s' already exists" [tmlId]
 
+-- File and Asset
+_ERROR_VALIDATION__DOC_TML_FILE_OR_ASSET_NAME_EMPTY =
+  LocaleRecord "error.validation.doc_tml_file_or_asset_name_empty" "DocumentTemplate file or asset name cannot be empty" []
+
 -- Document Template Locale
 _ERROR_VALIDATION__DOC_TML_LOCALE_INVALID_PO reason =
   LocaleRecord "error.validation.doc_tml_locale_invalid_po" "Unable to parse the PO file: %s" [reason]

@@ -2,6 +2,8 @@ module Shared.Service.DocumentTemplate.DocumentTemplateValidation where
 
 import Control.Monad (when)
 import Control.Monad.Except (throwError)
+import qualified Data.Map.Strict as M
+import qualified Data.Text as T
 import qualified Data.UUID as U
 import GHC.Records
 
@@ -45,6 +47,12 @@ validateMetamodelVersion dt =
     ( throwError . UserError $
         _ERROR_VALIDATION__TEMPLATE_UNSUPPORTED_METAMODEL_VERSION (show . createCoordinate $ dt) (show dt.metamodelVersion) (show documentTemplateMetamodelVersion)
     )
+
+validateFileName :: WizardRequestContextC s m => String -> m ()
+validateFileName fileName =
+  when
+    (any (T.null . T.strip) (T.splitOn "/" (T.pack fileName)))
+    (throwError $ ValidationError [] (M.singleton "fileName" [_ERROR_VALIDATION__DOC_TML_FILE_OR_ASSET_NAME_EMPTY]))
 
 validateFileAndAssetUniqueness :: forall s m. WizardRequestContextC s m => Maybe U.UUID -> U.UUID -> String -> m ()
 validateFileAndAssetUniqueness mTemplateEntityUuid dtUuid fileName = do

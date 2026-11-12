@@ -59,6 +59,7 @@ createAsset dtUuid reqDto =
   runInTransaction $ do
     checkEditorPermissionToDocumentTemplate dtUuid
     checkStorageSize (fromIntegral . BS.length $ reqDto.content)
+    validateFileName reqDto.fileName
     validateFileAndAssetUniqueness Nothing dtUuid reqDto.fileName
     aUuid <- liftIO generateUuid
     tenantUuid <- asks (.tenantUuid')
@@ -81,6 +82,7 @@ modifyAsset assetUuid reqDto =
     checkPermission _DOCUMENT_TEMPLATE_EDITORS_USE_ROLE_PERMISSION
     asset <- findAssetById assetUuid
     checkEditorPermissionToDocumentTemplate asset.documentTemplateUuid
+    validateFileName reqDto.fileName
     validateFileAndAssetUniqueness (Just asset.uuid) asset.documentTemplateUuid reqDto.fileName
     now <- liftIO getCurrentTimeInMicroseconds
     let updatedAsset = fromChangeDTO asset reqDto now
@@ -96,6 +98,7 @@ modifyAssetContent assetUuid reqDto =
     asset <- findAssetById assetUuid
     checkEditorPermissionToDocumentTemplate asset.documentTemplateUuid
     checkStorageSize (fromIntegral . BS.length $ reqDto.content)
+    validateFileName reqDto.fileName
     now <- liftIO getCurrentTimeInMicroseconds
     let fileSize = fromIntegral . BS.length $ reqDto.content
     let updatedAsset = fromChangeContentDTO asset reqDto.fileName reqDto.contentType fileSize now

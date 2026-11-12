@@ -4,6 +4,7 @@ module Specs.Api.Handler.DocumentTemplateDraft.File.Detail_PUT (
 
 import Data.Aeson (encode)
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Map.Strict as M
 import qualified Data.UUID as U
 import Network.HTTP.Types
 import Network.Wai (Application)
@@ -12,12 +13,14 @@ import Test.Hspec.Wai hiding (shouldRespondWith)
 import Test.Hspec.Wai.Matcher
 
 import Shared.Api.Resource.DocumentTemplate.DocumentTemplateChangeJM ()
+import Shared.Api.Resource.DocumentTemplate.File.DocumentTemplateFileChangeDTO
 import Shared.Api.Resource.Error.ErrorJM ()
 import Shared.Constant.Tenant
 import Shared.Database.Migration.Development.DocumentTemplate.Data.DocumentTemplateFiles
 import Shared.Database.Migration.Development.DocumentTemplate.Data.DocumentTemplates
 import Shared.Database.Migration.Development.DocumentTemplate.Data.WizardDocumentTemplateFiles
 import qualified Shared.Database.Migration.Development.DocumentTemplate.DocumentTemplateMigration as TML_Migration
+import Shared.Localization.Messages.DocumentTemplate.Public
 import Shared.Localization.Messages.Public
 import Shared.Model.DocumentTemplate.DocumentTemplate
 import Shared.Model.DocumentTemplate.DocumentTemplateJM ()
@@ -37,6 +40,7 @@ detail_PUT :: RequestContext -> SpecWith ((), Application)
 detail_PUT requestContext =
   describe "PUT /api/document-template-drafts/{dtUuid}/files/{fileUuid}" $ do
     test_200 requestContext
+    test_400 requestContext
     test_401 requestContext
     test_403 requestContext
     test_404 requestContext
@@ -79,6 +83,34 @@ create_test_200 title requestContext reqAuthHeader =
       compareTemplateFileDtos resDto expDto
       -- AND: Find result in DB and compare with expectation state
       assertExistenceOfTemplateFileInDB requestContext fileDefaultHtmlEdited
+
+-- ----------------------------------------------------
+-- ----------------------------------------------------
+-- ----------------------------------------------------
+test_400 requestContext = do
+  create_test_400 "HTTP 400 BAD REQUEST if the name is empty" requestContext ""
+  create_test_400 "HTTP 400 BAD REQUEST if the name in a folder is empty" requestContext "src/"
+
+create_test_400 title requestContext name =
+  it title $
+    -- GIVEN: Prepare request
+    do
+      let reqHeaders = reqHeadersT reqAuthHeader
+      let reqBody = encode (fileDefaultHtmlEditedChangeDTO {fileName = name} :: DocumentTemplateFileChangeDTO)
+      -- AND: Prepare expectation
+      let expStatus = 400
+      let expHeaders = resCtHeader : resCorsHeaders
+      let expBody = encode (ValidationError [] (M.singleton "fileName" [_ERROR_VALIDATION__DOC_TML_FILE_OR_ASSET_NAME_EMPTY]))
+      -- AND: Run migrations
+      runDraftTemplateMigration requestContext
+      -- WHEN: Call API
+      response <- request reqMethod reqUrl reqHeaders reqBody
+      -- THEN: Compare response with expectation
+      let responseMatcher =
+            ResponseMatcher {matchHeaders = expHeaders, matchStatus = expStatus, matchBody = bodyEquals expBody}
+      response `shouldRespondWith` responseMatcher
+      -- AND: Find result in DB and compare with expectation state
+      assertExistenceOfTemplateFileInDB requestContext fileDefaultHtml
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------
