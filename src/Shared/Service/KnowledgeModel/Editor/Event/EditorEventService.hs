@@ -1,6 +1,6 @@
 module Shared.Service.KnowledgeModel.Editor.Event.EditorEventService where
 
-import Control.Monad (replicateM)
+import Control.Monad (replicateM, when)
 import Control.Monad.Except (MonadError, liftEither, throwError)
 import Control.Monad.Reader (asks, liftIO, local)
 import Data.Aeson (toJSON)
@@ -14,6 +14,7 @@ import Shared.Api.Resource.KnowledgeModel.Editor.Event.KnowledgeModelEditorEvent
 import Shared.Api.Resource.KnowledgeModel.Editor.Event.KnowledgeModelEditorEventsDTO
 import Shared.Api.Resource.KnowledgeModel.Event.KnowledgeModelEventJM ()
 import Shared.Constant.KnowledgeModel
+import Shared.Constant.Websocket
 import Shared.Database.DAO.KnowledgeModel.KnowledgeModelEditorDAO
 import Shared.Database.DAO.KnowledgeModel.KnowledgeModelEditorEventDAO
 import Shared.Database.DAO.WizardCommon
@@ -141,11 +142,13 @@ squashEventsForEditor editorUuid =
     _ <- findKnowledgeModelEditorByUuidForSquashingLocked editorUuid
     kmEditorEvents <- findKnowledgeModelEventsByEditorUuid editorUuid
     let kmEvents = fmap toKnowledgeModelEvent kmEditorEvents
-    let squashedEvents = squash kmEvents
-    let squashedKmEditorEvents = fmap (toKnowledgeModelEditorEvent editorUuid tenantUuid) squashedEvents
-    deleteKnowledgeModelEventsByEditorUuid editorUuid
-    traverse_ insertKnowledgeModelEvent squashedKmEditorEvents
-    updateKnowledgeModelEditorSquashedByUuid editorUuid True
+    resendCutoff <- liftIO $ addUTCTime (negate websocketResendWindow) <$> getCurrentTime
+    let (oldEvents, freshEvents) = L.span ((< resendCutoff) . (.createdAt)) kmEvents
+    let squashedEvents = squash oldEvents ++ freshEvents
+    when (squashedEvents /= kmEvents) $ do
+      deleteKnowledgeModelEventsByEditorUuid editorUuid
+      traverse_ (insertKnowledgeModelEvent . toKnowledgeModelEditorEvent editorUuid tenantUuid) squashedEvents
+    updateKnowledgeModelEditorSquashedByUuid editorUuid (null freshEvents)
     logInfoI
       _CMP_SERVICE
       ( f'

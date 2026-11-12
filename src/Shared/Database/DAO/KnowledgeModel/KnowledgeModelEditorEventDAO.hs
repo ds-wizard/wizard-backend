@@ -24,6 +24,11 @@ findKnowledgeModelRawEventsByEditorUuid kmEditorUuid = do
   tenantUuid <- asks (.tenantUuid')
   createFindEntitiesWithFieldsBySortedFn "*" entityName [tenantQueryUuid tenantUuid, ("editor_uuid", U.toString kmEditorUuid)] [Sort "created_at" Ascending]
 
+findKnowledgeModelEventByEditorUuidAndUuid' :: WizardRequestContextC s m => U.UUID -> U.UUID -> m (Maybe KnowledgeModelEditorEvent)
+findKnowledgeModelEventByEditorUuidAndUuid' kmEditorUuid uuid = do
+  tenantUuid <- asks (.tenantUuid')
+  createFindEntityByFn' entityName [tenantQueryUuid tenantUuid, ("editor_uuid", U.toString kmEditorUuid), ("uuid", U.toString uuid)]
+
 insertKnowledgeModelEvent :: WizardRequestContextC s m => KnowledgeModelEditorEvent -> m Int64
 insertKnowledgeModelEvent = createInsertFn entityName
 

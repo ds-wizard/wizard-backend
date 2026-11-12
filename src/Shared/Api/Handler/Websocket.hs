@@ -46,20 +46,27 @@ runWebsocket
   => PendingConnection
   -> (U.UUID -> WebsocketOutbound -> m ())
   -> (U.UUID -> m ())
+  -> (reqDto -> Maybe U.UUID)
   -> (U.UUID -> reqDto -> m ())
   -> m ()
-runWebsocket pendingConnection putUserOnline deleteUser handleAction =
-  runWebsocketWith pendingConnection putUserOnline deleteUser (\connectionUuid outbound -> handleRawData connectionUuid outbound handleAction)
+runWebsocket pendingConnection putUserOnline deleteUser eventUuidOf handleAction =
+  runWebsocketWith
+    (Just websocketIdleTimeoutMicros)
+    pendingConnection
+    putUserOnline
+    deleteUser
+    (\connectionUuid outbound -> handleRawData connectionUuid outbound eventUuidOf handleAction)
 
 runWebsocketWith
   :: forall s m
    . WizardRequestContextC s m
-  => PendingConnection
+  => Maybe Int
+  -> PendingConnection
   -> (U.UUID -> WebsocketOutbound -> m ())
   -> (U.UUID -> m ())
   -> (U.UUID -> WebsocketOutbound -> BSL.ByteString -> m ())
   -> m ()
-runWebsocketWith pendingConnection putUserOnline deleteUser handleData = do
+runWebsocketWith mIdleTimeout pendingConnection putUserOnline deleteUser handleData = do
   connection <- liftIO $ acceptRequest pendingConnection {pendingOptions = websocketOptions}
   connectionUuid <- liftIO generateUuid
   logInfoI _CMP_API (f' "[C:%s] New websocket client" [U.toString connectionUuid])
@@ -67,7 +74,7 @@ runWebsocketWith pendingConnection putUserOnline deleteUser handleData = do
   context <- ask
   let run :: m a -> IO (Either String a)
       run action = runRequestContextWithRequestContext @s @m action context
-  let receive = receiveLoop connection connectionUuid outbound (handleData connectionUuid outbound)
+  let receive = receiveLoop connection connectionUuid outbound mIdleTimeout (handleData connectionUuid outbound)
   let lifetime = do
         connected <- run (admitConnection outbound (putUserOnline connectionUuid outbound))
         withPingThread connection websocketPingIntervalSeconds (return ()) (runConnection connection outbound (when (connected == Right True) . void $ run receive))
@@ -127,15 +134,18 @@ sendLoop connection outbound = do
   next <- atomically ((Nothing <$ readTMVar outbound.closeSignal) `orElse` (Just <$> readTBQueue outbound.queue))
   traverse_ (\payload -> sendTextData connection payload >> sendLoop connection outbound) next
 
-receiveLoop :: WizardRequestContextC s m => Connection -> U.UUID -> WebsocketOutbound -> (BSL.ByteString -> m ()) -> m ()
-receiveLoop connection connectionUuid outbound handleData = do
+receiveLoop :: WizardRequestContextC s m => Connection -> U.UUID -> WebsocketOutbound -> Maybe Int -> (BSL.ByteString -> m ()) -> m ()
+receiveLoop connection connectionUuid outbound mIdleTimeout handleData = do
   logWS connectionUuid "Waiting for messages..."
-  eRawData <- liftIO $ E.try (receiveData connection)
+  eRawData <- liftIO . E.try $ receiveWithin mIdleTimeout connection
   case eRawData of
-    Right rawData -> do
+    Right (Just rawData) -> do
       logWS connectionUuid "New message received"
       handled <- runGuarded outbound (handleData rawData)
-      when (isJust handled) (receiveLoop connection connectionUuid outbound handleData)
+      when (isJust handled) (receiveLoop connection connectionUuid outbound mIdleTimeout handleData)
+    Right Nothing -> do
+      logInfoI _CMP_API (f' "[C:%s] No message from the client within the idle timeout, closing the connection" [U.toString connectionUuid])
+      closeOutbound outbound 1012 Nothing
     Left (CloseRequest code message) ->
       logWS connectionUuid (f' "Request to close websocket (code: %s, msg: '%s')" [show code, show message])
     Left ConnectionClosed -> logWS connectionUuid "Connection closed"
@@ -144,21 +154,25 @@ receiveLoop connection connectionUuid outbound handleData = do
       closeOutbound outbound (if "exceeded limit" `isInfixOf` message then 1009 else 1002) Nothing
     Left (UnicodeException message) -> logWS connectionUuid ("Unicode Exception: " ++ message)
 
+receiveWithin :: Maybe Int -> Connection -> IO (Maybe BSL.ByteString)
+receiveWithin mIdleTimeout connection = maybe (fmap Just) timeout mIdleTimeout (receiveData connection)
+
 handleRawData
   :: (WizardRequestContextC s m, FromJSON reqDto)
   => U.UUID
   -> WebsocketOutbound
+  -> (reqDto -> Maybe U.UUID)
   -> (U.UUID -> reqDto -> m ())
   -> BSL.ByteString
   -> m ()
-handleRawData connectionUuid outbound handleAction rawData =
-  case eitherDecode rawData of
-    Right action -> catchError (handleAction connectionUuid action) (sendError outbound connectionUuid)
-    Left error
-      | "ping" `isInfixOf` error -> return ()
-      | otherwise -> do
+handleRawData connectionUuid outbound eventUuidOf handleAction rawData
+  | rawData == "ping" = enqueueOutbound outbound connectionUuid encodePong
+  | otherwise =
+      case eitherDecode rawData of
+        Right action -> catchError (handleAction connectionUuid action) (sendError outbound connectionUuid (eventUuidOf action))
+        Left error -> do
           logWS connectionUuid ("Deserialization failed: " ++ error)
-          sendError outbound connectionUuid (UserError . _ERROR_API_WEBSOCKET__DESERIALIZATION_FAILED $ dropParsedTypeName error)
+          sendError outbound connectionUuid Nothing (UserError . _ERROR_API_WEBSOCKET__DESERIALIZATION_FAILED $ dropParsedTypeName error)
 
-sendError :: WizardRequestContextC s m => WebsocketOutbound -> U.UUID -> AppError -> m ()
-sendError outbound connectionUuid error = enqueueOutbound outbound connectionUuid (encodeError error)
+sendError :: WizardRequestContextC s m => WebsocketOutbound -> U.UUID -> Maybe U.UUID -> AppError -> m ()
+sendError outbound connectionUuid mEventUuid error = enqueueOutbound outbound connectionUuid (encodeError mEventUuid error)

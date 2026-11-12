@@ -4,7 +4,7 @@ import Control.Concurrent.STM
 import Control.Monad (unless, void, when)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Reader (asks, liftIO)
-import Data.Aeson (ToJSON, encode)
+import Data.Aeson (ToJSON, encode, object, (.=))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.UUID as U
 import Data.Word (Word16)
@@ -34,17 +34,20 @@ enqueueOutbound outbound connectionUuid payload = do
     return (not full)
   unless accepted $ do
     logInfoI _CMP_API (f' "[C:%s] Outbound queue is full, closing the connection" [U.toString connectionUuid])
-    closeOutbound outbound 1008 (Just . UserError $ _ERROR_API_WEBSOCKET__QUEUE_OVERFLOW)
+    closeOutbound outbound 1012 (Just . UserError $ _ERROR_API_WEBSOCKET__QUEUE_OVERFLOW)
 
 closeConnection :: MonadIO m => LocalWebsocketConnection -> Word16 -> Maybe AppError -> m ()
 closeConnection connection = closeOutbound connection.outbound
 
 closeOutbound :: MonadIO m => WebsocketOutbound -> Word16 -> Maybe AppError -> m ()
 closeOutbound outbound code mError =
-  liftIO . atomically . void $ tryPutTMVar outbound.closeSignal (code, fmap encodeError mError)
+  liftIO . atomically . void $ tryPutTMVar outbound.closeSignal (code, fmap (encodeError Nothing) mError)
 
-encodeError :: AppError -> BSL.ByteString
-encodeError = encode . Error_ServerActionDTO
+encodeError :: Maybe U.UUID -> AppError -> BSL.ByteString
+encodeError mEventUuid error = encode (Error_ServerActionDTO error mEventUuid)
+
+encodePong :: BSL.ByteString
+encodePong = encode (object ["type" .= ("Pong_ServerAction" :: String)])
 
 logWS :: WizardRequestContextC s m => U.UUID -> String -> m ()
 logWS connectionUuid message = do

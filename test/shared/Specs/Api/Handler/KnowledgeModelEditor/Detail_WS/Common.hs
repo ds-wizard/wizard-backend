@@ -98,8 +98,12 @@ read_SetUserList connection expConnectionCount = do
 read_Error connection expError = do
   resDto <- receiveDataWithin connection
   let eResult = eitherDecode resDto :: Either String Error_ServerActionDTO
-  let (Right (Error_ServerActionDTO error)) = eResult
+  let (Right (Error_ServerActionDTO error _)) = eResult
   error `shouldBe` expError
+
+read_EventError connection expError expEventUuid = do
+  resDto <- receiveDataWithin connection
+  eitherDecode resDto `shouldBe` Right (Error_ServerActionDTO expError (Just expEventUuid))
 
 read_SetUserList_or_Error connection expError = do
   resDto <- receiveDataWithin connection
@@ -109,7 +113,7 @@ read_SetUserList_or_Error connection expError = do
     (Right "Success_ServerAction") -> read_Error connection expError
     (Right "Error_ServerAction") -> do
       let eResult = eitherDecode resDto :: Either String Error_ServerActionDTO
-      let (Right (Error_ServerActionDTO error)) = eResult
+      let (Right (Error_ServerActionDTO error _)) = eResult
       error `shouldBe` expError
     rest -> print rest
 

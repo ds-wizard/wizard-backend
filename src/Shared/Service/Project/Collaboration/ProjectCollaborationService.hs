@@ -1,6 +1,7 @@
 module Shared.Service.Project.Collaboration.ProjectCollaborationService where
 
 import Control.Monad (when)
+import Control.Monad.Except (throwError)
 import Control.Monad.Reader (asks, liftIO, local)
 import Data.Aeson (ToJSON, toJSON)
 import Data.IORef
@@ -10,10 +11,13 @@ import qualified Data.UUID as U
 
 import Shared.Api.Resource.Project.Detail.ProjectDetailWsDTO
 import Shared.Api.Resource.Project.Event.ProjectEventChangeDTO
+import Shared.Api.Resource.Project.Event.ProjectEventDTO
 import Shared.Api.Resource.User.UserDTO
 import Shared.Database.DAO.Project.ProjectDAO
 import Shared.Database.DAO.User.UserGroupMembershipDAO
+import Shared.Localization.Messages.Public
 import Shared.Model.Context.WizardRequestContext
+import Shared.Model.Error.Error
 import Shared.Model.KnowledgeModel.KnowledgeModel
 import Shared.Model.Project.File.ProjectFileSimple
 import Shared.Model.Project.Project
@@ -35,6 +39,8 @@ import Shared.Service.Websocket.WebsocketBusService
 import Shared.Service.Websocket.WebsocketRegistryService
 import Shared.Service.Websocket.WebsocketService
 import Shared.Service.Workspace.WorkspaceScopeService
+import Shared.Util.Date (getCurrentTimeInMicroseconds)
+import Shared.Util.Error (tryError)
 import Shared.Util.Websocket
 
 putUserOnline :: WizardRequestContextC s m => U.UUID -> U.UUID -> WebsocketOutbound -> m ()
@@ -88,8 +94,29 @@ setContent :: WizardRequestContextC s m => U.UUID -> IORef (Maybe KnowledgeModel
 setContent projectUuid knowledgeModelRef connectionUuid reqDto = do
   key <- projectKey projectUuid
   myself <- findLocalConnection' key connectionUuid
-  let findKnowledgeModel = findConnectionKnowledgeModel knowledgeModelRef projectUuid
-  processSetContent projectUuid findKnowledgeModel myself.websocketPerm (getMaybeCreatedBy myself.onlineUser) reqDto
+  checkChangePermission myself.websocketPerm reqDto
+  mStored <- findStoredEvent projectUuid reqDto
+  case mStored of
+    Just stored -> echoStoredEvent myself stored
+    Nothing -> addNewEvent projectUuid (findConnectionKnowledgeModel knowledgeModelRef projectUuid) myself reqDto
+
+addNewEvent :: WizardRequestContextC s m => U.UUID -> m KnowledgeModel -> LocalWebsocketConnection -> ProjectEventChangeDTO -> m ()
+addNewEvent projectUuid findKnowledgeModel myself reqDto = do
+  let mCreatedBy = getMaybeCreatedBy myself.onlineUser
+  validateProjectEventChange projectUuid findKnowledgeModel reqDto
+  now <- liftIO getCurrentTimeInMicroseconds
+  result <- tryError (storeEventOnce projectUuid mCreatedBy now reqDto)
+  case result of
+    Right True -> broadcastEvent projectUuid mCreatedBy now reqDto
+    Right False -> echoStoredEventOr (UserError _ERROR_DATABASE__UNIQUE_CONSTRAINT_VIOLATION)
+    Left error -> echoStoredEventOr error
+  where
+    echoStoredEventOr error = findStoredEvent projectUuid reqDto >>= maybe (throwError error) (echoStoredEvent myself)
+
+echoStoredEvent :: WizardRequestContextC s m => LocalWebsocketConnection -> ProjectEventDTO -> m ()
+echoStoredEvent myself event = do
+  when (isPrivateComment event) (checkEditPermission myself.websocketPerm)
+  enqueueMessage myself (toAddEventMessage event)
 
 findConnectionKnowledgeModel :: WizardRequestContextC s m => IORef (Maybe KnowledgeModel) -> U.UUID -> m KnowledgeModel
 findConnectionKnowledgeModel knowledgeModelRef projectUuid = do
@@ -104,7 +131,7 @@ findConnectionKnowledgeModel knowledgeModelRef projectUuid = do
 
 processSetContent :: WizardRequestContextC s m => U.UUID -> m KnowledgeModel -> WebsocketPerm -> Maybe UserSuggestion -> ProjectEventChangeDTO -> m ()
 processSetContent projectUuid findKnowledgeModel perm mCreatedBy reqDto = do
-  if isJust (commentPrivacy reqDto) then checkCommentPermission perm else checkEditPermission perm
+  checkChangePermission perm reqDto
   validateProjectEventChange projectUuid findKnowledgeModel reqDto
   now <- liftIO getCurrentTime
   storeEvent projectUuid mCreatedBy now reqDto
@@ -113,6 +140,13 @@ processSetContent projectUuid findKnowledgeModel perm mCreatedBy reqDto = do
 broadcastEvent :: WizardRequestContextC s m => U.UUID -> Maybe UserSuggestion -> UTCTime -> ProjectEventChangeDTO -> m ()
 broadcastEvent projectUuid mCreatedBy now reqDto =
   broadcast projectUuid (maybe AllRecipients commentRecipients (commentPrivacy reqDto)) (toAddEventMessage (toEventDTO' reqDto mCreatedBy now))
+
+checkChangePermission :: WizardRequestContextC s m => WebsocketPerm -> ProjectEventChangeDTO -> m ()
+checkChangePermission perm reqDto = if isJust (commentPrivacy reqDto) then checkCommentPermission perm else checkEditPermission perm
+
+isPrivateComment :: ProjectEventDTO -> Bool
+isPrivateComment (AddCommentEventDTO' event) = event.private
+isPrivateComment _ = False
 
 commentPrivacy :: ProjectEventChangeDTO -> Maybe Bool
 commentPrivacy reqDto =

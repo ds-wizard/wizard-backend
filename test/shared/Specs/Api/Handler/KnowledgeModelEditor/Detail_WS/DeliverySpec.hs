@@ -95,7 +95,7 @@ test_userList requestContext =
 -- ----------------------------------------------------
 -- ----------------------------------------------------
 test_ping requestContext =
-  it "WS 200 OK - ping text is accepted silently" $
+  it "WS 200 OK - ping text gets a pong to the sender only" $
     -- GIVEN: Prepare database
     do
       let editor = amsterdamKnowledgeModelEditor
@@ -105,7 +105,8 @@ test_ping requestContext =
       -- WHEN:
       sendTextData c1 (T.pack "ping")
       -- THEN:
-      nothingWasReceivedWithin 300000 c1
+      read_Pong c1
+      nothingWasReceived c2
       assertCountOfWebsocketConnection requestContext 2
       -- AND: Close sockets
       closeSockets [s1, s2]

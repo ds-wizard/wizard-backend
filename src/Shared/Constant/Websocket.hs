@@ -1,6 +1,7 @@
 module Shared.Constant.Websocket where
 
 import Data.Int (Int64)
+import Data.Time (NominalDiffTime)
 
 websocketChannelName :: String
 websocketChannelName = "websocket"
@@ -16,6 +17,12 @@ websocketInlinePayloadLimit = 7 * 1024
 
 websocketPingIntervalSeconds :: Int
 websocketPingIntervalSeconds = 30
+
+websocketIdleTimeoutMicros :: Int
+websocketIdleTimeoutMicros = 90000000
+
+websocketResendWindow :: NominalDiffTime
+websocketResendWindow = 3600
 
 websocketCloseTimeoutMicros :: Int
 websocketCloseTimeoutMicros = 2000000

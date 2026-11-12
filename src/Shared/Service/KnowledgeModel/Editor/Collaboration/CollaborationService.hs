@@ -4,6 +4,7 @@ import Control.Monad (void, when)
 import Control.Monad.Reader (asks)
 import Data.Aeson (ToJSON, toJSON)
 import Data.Foldable (traverse_)
+import Data.Maybe (isNothing)
 import qualified Data.UUID as U
 
 import Shared.Api.Resource.KnowledgeModel.Editor.Event.KnowledgeModelEditorWebSocketEventDTO
@@ -11,7 +12,7 @@ import Shared.Api.Resource.KnowledgeModel.Editor.Event.SetRepliesDTO
 import Shared.Api.Resource.Websocket.KnowledgeModelEditorMessageJM ()
 import Shared.Api.Resource.Websocket.WebsocketActionJM ()
 import Shared.Database.DAO.KnowledgeModel.KnowledgeModelEditorDAO
-import Shared.Database.DAO.KnowledgeModel.KnowledgeModelEditorEventDAO (insertKnowledgeModelEvent)
+import Shared.Database.DAO.KnowledgeModel.KnowledgeModelEditorEventDAO (findKnowledgeModelEventByEditorUuidAndUuid', insertKnowledgeModelEvent)
 import Shared.Database.DAO.KnowledgeModel.KnowledgeModelEditorReplyDAO
 import Shared.Database.DAO.WizardCommon (runInPooledTransaction)
 import Shared.Model.Context.WizardRequestContext
@@ -22,6 +23,7 @@ import Shared.Model.Websocket.WebsocketRegistry
 import Shared.Model.Websocket.WebsocketSubscription
 import Shared.Service.KnowledgeModel.Editor.Collaboration.CollaborationAcl
 import Shared.Service.KnowledgeModel.Editor.Collaboration.CollaborationMapper
+import Shared.Service.KnowledgeModel.Editor.EditorMapper (toKnowledgeModelEvent)
 import Shared.Service.KnowledgeModel.Editor.Event.EditorEventValidation
 import Shared.Service.Websocket.WebsocketBusService
 import Shared.Service.Websocket.WebsocketRegistryService
@@ -56,18 +58,24 @@ setContent kmEditorUuid connectionUuid reqDto =
 
 addKnowledgeModelEvent :: WizardRequestContextC s m => U.UUID -> U.UUID -> AddKnowledgeModelEditorWebSocketEventDTO -> m ()
 addKnowledgeModelEvent kmEditorUuid connectionUuid reqDto = do
-  checkConnection kmEditorUuid connectionUuid
+  key <- editorKey kmEditorUuid
+  myself <- findLocalConnection' key connectionUuid
   checkEditPermission kmEditorUuid
-  runInPooledTransaction (storeKnowledgeModelEvent kmEditorUuid reqDto.event)
-  broadcast kmEditorUuid (toAddKnowledgeModelEditorWebsocketMessage reqDto)
+  mStored <- runInPooledTransaction (storeKnowledgeModelEvent kmEditorUuid reqDto.event)
+  case mStored of
+    Just stored -> enqueueMessage myself (toAddKnowledgeModelEditorWebsocketMessage (reqDto {event = stored} :: AddKnowledgeModelEditorWebSocketEventDTO))
+    Nothing -> broadcast kmEditorUuid (toAddKnowledgeModelEditorWebsocketMessage reqDto)
 
-storeKnowledgeModelEvent :: WizardRequestContextC s m => U.UUID -> KnowledgeModelEvent -> m ()
+storeKnowledgeModelEvent :: WizardRequestContextC s m => U.UUID -> KnowledgeModelEvent -> m (Maybe KnowledgeModelEvent)
 storeKnowledgeModelEvent kmEditorUuid event = do
   _ <- findKnowledgeModelEditorByUuidLocked kmEditorUuid
-  validateWebsocketEditorEvent kmEditorUuid event
-  tenantUuid <- asks (.tenantUuid')
-  insertKnowledgeModelEvent (fromAddKnowledgeModelEditorWebSocketEventDTO event kmEditorUuid tenantUuid)
-  void $ updateKnowledgeModelEditorSquashedByUuid kmEditorUuid False
+  mStored <- findKnowledgeModelEventByEditorUuidAndUuid' kmEditorUuid event.uuid
+  when (isNothing mStored) $ do
+    validateWebsocketEditorEvent kmEditorUuid event
+    tenantUuid <- asks (.tenantUuid')
+    insertKnowledgeModelEvent (fromAddKnowledgeModelEditorWebSocketEventDTO event kmEditorUuid tenantUuid)
+    void $ updateKnowledgeModelEditorSquashedByUuid kmEditorUuid False
+  return (fmap toKnowledgeModelEvent mStored)
 
 broadcastKnowledgeModelEvents :: WizardRequestContextC s m => U.UUID -> [KnowledgeModelEvent] -> m ()
 broadcastKnowledgeModelEvents kmEditorUuid =

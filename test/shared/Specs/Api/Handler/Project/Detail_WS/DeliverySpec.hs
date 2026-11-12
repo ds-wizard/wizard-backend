@@ -21,6 +21,7 @@ import Shared.Database.Migration.Development.Project.Data.ProjectEvents
 import Shared.Database.Migration.Development.Project.Data.Projects
 import Shared.Localization.Messages.Public
 import Shared.Model.Error.Error
+import Shared.Model.Localization.LocaleRecord
 import Shared.Model.Project.Event.ProjectEvent
 import Shared.Model.Project.Project
 import Shared.Model.Project.ProjectReply
@@ -85,7 +86,7 @@ test_slowClient requestContext =
 -- ----------------------------------------------------
 -- ----------------------------------------------------
 test_overflowFrame requestContext =
-  it "WS 200 OK - a client that falls behind gets the overflow error and close 1008" $
+  it "WS 200 OK - a client that falls behind gets the overflow error and close 1012" $
     -- GIVEN: Prepare database
     do
       let project = project10
@@ -100,8 +101,8 @@ test_overflowFrame requestContext =
           wait sender
         -- THEN:
         (lastMessage, closeCode) <- wait slowReader
-        fmap eitherDecode lastMessage `shouldBe` Just (Right (Error_ServerActionDTO (UserError _ERROR_API_WEBSOCKET__QUEUE_OVERFLOW)))
-        closeCode `shouldBe` Just 1008
+        fmap eitherDecode lastMessage `shouldBe` Just (Right (Error_ServerActionDTO (UserError _ERROR_API_WEBSOCKET__QUEUE_OVERFLOW) Nothing))
+        closeCode `shouldBe` Just 1012
       -- AND: Close sockets
       closeSockets [s1, s2, s3]
 
@@ -130,8 +131,8 @@ test_actionFailure requestContext =
 -- ----------------------------------------------------
 -- ----------------------------------------------------
 -- ----------------------------------------------------
-test_ping requestContext =
-  it "WS 200 OK - ping text is accepted silently" $
+test_ping requestContext = do
+  it "WS 200 OK - ping text gets a pong to the sender only" $
     -- GIVEN: Prepare database
     do
       let project = project10
@@ -141,8 +142,24 @@ test_ping requestContext =
       -- WHEN:
       sendTextData c1 (T.pack "ping")
       -- THEN:
-      nothingWasReceivedWithin 300000 c1
+      read_Pong c1
+      nothingWasReceived c2
+      nothingWasReceived c3
       assertCountOfWebsocketConnection requestContext 3
+      -- AND: Close sockets
+      closeSockets [s1, s2, s3]
+  it "WS 400 BAD REQUEST - a text that only contains ping is not a ping" $
+    -- GIVEN: Prepare database
+    do
+      let project = project10
+      insertProjectAndUsers requestContext project
+      -- AND: Connect to websocket
+      ((c1, s1), (c2, s2), (c3, s3)) <- connectTestWebsocketUsers requestContext project.uuid
+      -- WHEN:
+      sendTextData c1 (T.pack "pings")
+      -- THEN:
+      read_DeserializationError c1
+      nothingWasReceived c2
       -- AND: Close sockets
       closeSockets [s1, s2, s3]
 
@@ -171,6 +188,13 @@ read_SetReplyValueAmidUserLists connection expDto = do
     Right (Success_ServerActionDTO (SetUserList_ServerProjectMessageDTO _)) -> read_SetReplyValueAmidUserLists connection expDto
     Right (Success_ServerActionDTO (SetContent_ServerProjectMessageDTO (SetReplyEventDTO' replyDto))) -> replyDto.value `shouldBe` expDto.value
     other -> expectationFailure ("Expected a reply, got: " ++ show other)
+
+read_DeserializationError :: Connection -> IO ()
+read_DeserializationError connection = do
+  resDto <- receiveDataWithin connection
+  case eitherDecode resDto of
+    Right (Error_ServerActionDTO (UserError error) Nothing) -> error.code `shouldBe` (_ERROR_API_WEBSOCKET__DESERIALIZATION_FAILED "").code
+    other -> expectationFailure ("Expected a deserialization error, got: " ++ show other)
 
 readSlowlyUntilClosed :: Connection -> IO (Maybe BSL.ByteString, Maybe Word16)
 readSlowlyUntilClosed connection = go Nothing

@@ -13,6 +13,7 @@ import Shared.Api.Resource.Websocket.ProjectMessageDTO
 import Shared.Api.Resource.Websocket.ProjectMessageJM ()
 import Shared.Model.Context.TransactionState
 import Shared.Service.Project.Collaboration.ProjectCollaborationService
+import Shared.Service.Project.Event.ProjectEventStorageService (eventChangeUuid)
 import Shared.Util.Websocket
 
 type Detail_WS =
@@ -28,8 +29,9 @@ detail_WS mServerUrl projectUuid mTokenHeader pendingConnection =
   rejectOnError pendingConnection . getMaybeAuthServiceExecutor mTokenHeader mServerUrl $ \runInMaybeAuthService ->
     runInMaybeAuthService NoTransaction $ do
       knowledgeModelRef <- liftIO (newIORef Nothing)
-      runWebsocket pendingConnection (putUserOnline projectUuid) (deleteUser projectUuid) (handleAction knowledgeModelRef)
+      runWebsocket pendingConnection (putUserOnline projectUuid) (deleteUser projectUuid) eventUuidOf (handleAction knowledgeModelRef)
   where
+    eventUuidOf (SetContent_ClientProjectMessageDTO reqDto) = Just (eventChangeUuid reqDto)
     handleAction knowledgeModelRef connectionUuid (SetContent_ClientProjectMessageDTO reqDto) = do
       logWS connectionUuid "SetContent"
       setContent projectUuid knowledgeModelRef connectionUuid reqDto

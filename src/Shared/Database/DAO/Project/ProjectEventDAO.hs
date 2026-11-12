@@ -143,6 +143,11 @@ findProjectEventByUuid' uuid = do
   tenantUuid <- asks (.tenantUuid')
   createFindEntityByFn' entityName [tenantQueryUuid tenantUuid, ("uuid", U.toString uuid)]
 
+findProjectEventByProjectUuidAndUuid' :: WizardRequestContextC s m => U.UUID -> U.UUID -> m (Maybe ProjectEvent)
+findProjectEventByProjectUuidAndUuid' projectUuid uuid = do
+  tenantUuid <- asks (.tenantUuid')
+  createFindEntityByFn' entityName [tenantQueryUuid tenantUuid, ("project_uuid", U.toString projectUuid), ("uuid", U.toString uuid)]
+
 insertProjectEvent :: WizardRequestContextC s m => ProjectEvent -> m Int64
 insertProjectEvent = createInsertFn entityName
 
@@ -164,6 +169,20 @@ insertProjectEventWithTimestampUpdate projectUuid event = do
   let action conn = execute conn sql params
   runDB action
   return ()
+
+insertProjectEventIfAbsent :: WizardRequestContextC s m => ProjectEvent -> m Bool
+insertProjectEventIfAbsent event = do
+  tenantUuid <- asks (.tenantUuid')
+  let sql =
+        fromString $
+          f'
+            "WITH inserted AS (INSERT INTO project_event VALUES (%s) ON CONFLICT (uuid) DO NOTHING RETURNING project_uuid) \
+            \UPDATE project SET squashed = false, updated_at = now() WHERE tenant_uuid = ? AND uuid IN (SELECT project_uuid FROM inserted)"
+            [generateQuestionMarks' event]
+  let params = toRow event ++ [toField tenantUuid]
+  logInsertAndUpdate sql params
+  let action conn = execute conn sql params
+  (== 1) <$> runDB action
 
 insertProjectEvents :: WizardRequestContextC s m => [ProjectEvent] -> m Int64
 insertProjectEvents events = do

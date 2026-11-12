@@ -88,7 +88,7 @@ projectEventServiceSpec =
         resultEvents `shouldBe` expEvents
 
 projectEventServiceIntegrationSpec requestContext =
-  describe "ProjectEventService" $
+  describe "ProjectEventService" $ do
     it "squashProjectEvents squashes a project of another tenant" $
       -- GIVEN: prepare data
       do
@@ -105,6 +105,26 @@ projectEventServiceIntegrationSpec requestContext =
         events `shouldBe` [differentQ1Event2]
         (Right project) <- runInContext (findProjectByUuid differentProject.uuid) differentContext
         project.squashed `shouldBe` True
+    it "squashProjectEvents keeps the events younger than an hour and the project not squashed" $
+      -- GIVEN: prepare data
+      do
+        let differentContext = setTenantUuid differentTenant.uuid requestContext
+        now <- getCurrentTimeInMicroseconds
+        freshUuids <- traverse (const generateUuid) [1 .. 2 :: Int]
+        let oldEvents = [differentQ1Event1, differentQ1Event2]
+        let freshEvents = zipWith3 (\uuid createdAt event -> setUuid (setCreatedAt event createdAt) uuid) freshUuids [addUTCTime (-600) now, addUTCTime (-300) now] oldEvents
+        runInContextIO U_Migration.runMigration requestContext
+        runInContextIO TML_Migration.runMigration requestContext
+        runInContextIO PRJ_Migration.runMigration requestContext
+        runInContextIO (insertProjectEvents (oldEvents ++ freshEvents)) differentContext
+        runInContextIO (updateProjectSquashedByUuid differentProject.uuid False) differentContext
+        -- WHEN:
+        runInContextIO (squashProjectEventsForProject differentProject.uuid) differentContext
+        -- THEN:
+        (Right events) <- runInContext (findProjectEventsByProjectUuid differentProject.uuid) differentContext
+        events `shouldBe` (differentQ1Event2 : freshEvents)
+        (Right project) <- runInContext (findProjectByUuid differentProject.uuid) differentContext
+        project.squashed `shouldBe` False
 
 -- ---------------------------
 -- EVENTS

@@ -15,6 +15,7 @@ import Shared.Api.Resource.Project.Event.ProjectEventChangeDTO
 import Shared.Api.Resource.Project.Event.ProjectEventDTO
 import Shared.Api.Resource.Project.ProjectContentChangeDTO
 import Shared.Constant.Project
+import Shared.Constant.Websocket
 import Shared.Database.DAO.Project.ProjectDAO
 import Shared.Database.DAO.Project.ProjectEventDAO
 import Shared.Database.DAO.Project.ProjectVersionDAO
@@ -130,9 +131,11 @@ squashProjectEventsForProject projectUuid =
     logInfoI _CMP_SERVICE (f' "Squashing events for project (projectUuid: '%s')" [U.toString projectUuid])
     events <- findProjectEventsByProjectUuid projectUuid
     versions <- findProjectVersionsByProjectUuid projectUuid
-    let squashedEvents = squash versions events
+    resendCutoff <- liftIO $ addUTCTime (negate websocketResendWindow) <$> getCurrentTime
+    let (oldEvents, freshEvents) = L.span ((< resendCutoff) . getCreatedAt) events
+    let squashedEvents = squash versions oldEvents ++ freshEvents
     syncProjectEventsWithDb events squashedEvents
-    updateProjectSquashedByUuid projectUuid True
+    updateProjectSquashedByUuid projectUuid (null freshEvents)
     logInfoI
       _CMP_SERVICE
       ( f'

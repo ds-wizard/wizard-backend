@@ -76,6 +76,7 @@ import Specs.Api.Handler.User.News.ApiSpec
 import Specs.Api.Handler.User.Tour.ApiSpec
 import Specs.Api.Handler.UserGroup.ApiSpec
 import Specs.Api.Handler.Websocket.Common
+import Specs.Api.Handler.Websocket.IdleTimeoutSpec
 import Specs.Api.Handler.Websocket.MultiNodeSpec
 import Specs.Api.Handler.Workspace.ApiSpec
 import Specs.Api.Resource.Coordinate.CoordinateJMSpec
@@ -378,4 +379,5 @@ main =
               knowledgeModelEditorWebsocketAPI requestContext
               projectWebsocketAPI requestContext
               multiNodeSpec requestContext
+              idleTimeoutSpec requestContext
     )

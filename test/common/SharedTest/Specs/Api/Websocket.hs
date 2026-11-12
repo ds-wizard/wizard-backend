@@ -4,6 +4,7 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (readTVarIO)
 import qualified Control.Exception as E
 import Control.Monad (unless, void)
+import Data.Aeson
 import qualified Data.Text as T
 import Data.Word (Word16)
 import Network.Socket
@@ -70,6 +71,11 @@ read_CloseCode connection expCode = do
   case result of
     Left (CloseRequest code _) -> code `shouldBe` expCode
     other -> expectationFailure ("Expected a close frame, got: " ++ show other)
+
+read_Pong :: Connection -> IO ()
+read_Pong connection = do
+  resDto <- receiveDataWithin connection
+  eitherDecode resDto `shouldBe` Right (object ["type" .= ("Pong_ServerAction" :: String)])
 
 nothingWasReceived :: Connection -> IO ()
 nothingWasReceived = nothingWasReceivedWithin 200000

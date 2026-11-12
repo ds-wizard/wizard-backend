@@ -5,6 +5,7 @@ import qualified Data.UUID as U
 
 import Shared.Api.Resource.Project.Event.ProjectEventChangeDTO
 import Shared.Api.Resource.Project.Event.ProjectEventDTO
+import Shared.Model.Project.Comment.ProjectComment
 import Shared.Model.Project.Event.ProjectEvent
 import Shared.Model.Project.Event.ProjectEventList
 import Shared.Model.Project.ProjectReply
@@ -272,6 +273,20 @@ toAddCommentEventDTO' event mCreatedBy now =
     , newThread = event.newThread
     , createdBy = mCreatedBy
     , createdAt = now
+    }
+
+toAddCommentEventDTO :: AddCommentEventChangeDTO -> ProjectCommentThread -> ProjectComment -> Maybe User -> AddCommentEventDTO
+toAddCommentEventDTO event thread comment mCreatedBy =
+  AddCommentEventDTO
+    { uuid = event.uuid
+    , path = thread.path
+    , threadUuid = thread.uuid
+    , commentUuid = comment.uuid
+    , text = comment.text
+    , private = thread.private
+    , newThread = event.newThread
+    , createdBy = fmap (UM.toSuggestion . UM.toSimple) mCreatedBy
+    , createdAt = comment.createdAt
     }
 
 toEditCommentEventDTO' :: EditCommentEventChangeDTO -> Maybe UserSuggestion -> UTCTime -> EditCommentEventDTO

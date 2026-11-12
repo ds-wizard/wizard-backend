@@ -7,6 +7,8 @@ import Servant.API.WebSocket
 
 import Shared.Api.Handler.Websocket
 import Shared.Api.Handler.WizardCommon
+import Shared.Api.Resource.KnowledgeModel.Editor.Event.KnowledgeModelEditorWebSocketEventDTO
+import Shared.Api.Resource.KnowledgeModel.Editor.Event.SetRepliesDTO
 import Shared.Api.Resource.Websocket.KnowledgeModelEditorMessageDTO
 import Shared.Api.Resource.Websocket.KnowledgeModelEditorMessageJM ()
 import Shared.Model.Context.TransactionState
@@ -25,8 +27,10 @@ detail_WS :: WizardHandlerC s sm r rm => Maybe String -> U.UUID -> Maybe String 
 detail_WS mServerUrl editorUuid mTokenHeader pendingConnection =
   rejectOnError pendingConnection . getMaybeAuthServiceExecutor mTokenHeader mServerUrl $ \runInMaybeAuthService ->
     runInMaybeAuthService NoTransaction $
-      runWebsocket pendingConnection (putUserOnline editorUuid) (deleteUser editorUuid) handleAction
+      runWebsocket pendingConnection (putUserOnline editorUuid) (deleteUser editorUuid) eventUuidOf handleAction
   where
+    eventUuidOf (SetContent_ClientKnowledgeModelEditorMessageDTO (AddKnowledgeModelEditorWebSocketEventDTO' reqDto)) = Just reqDto.uuid
+    eventUuidOf (SetReplies_ClientKnowledgeModelEditorMessageDTO reqDto) = Just reqDto.uuid
     handleAction connectionUuid (SetContent_ClientKnowledgeModelEditorMessageDTO reqDto) = do
       logWS connectionUuid "SetContent"
       setContent editorUuid connectionUuid reqDto
