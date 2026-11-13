@@ -88,6 +88,7 @@ replyKey events index = keyedField "replies" (maybe "" changePath (events L.!? i
 changePath :: ProjectEventChangeDTO -> String
 changePath (SetReplyEventChangeDTO' event) = event.path
 changePath (ClearReplyEventChangeDTO' event) = event.path
+changePath (DeleteItemEventChangeDTO' event) = event.path
 changePath _ = ""
 
 validateReplyChanges :: KnowledgeModel -> [U.UUID] -> Bool -> M.Map String ReplyValue -> [ProjectEventChangeDTO] -> [(Int, (String, LocaleRecord))]
@@ -105,6 +106,9 @@ validateReplyChange km fileUuids withValues replies (SetReplyEventChangeDTO' eve
     when withValues (validateReplyValue question event.value)
 validateReplyChange km _ _ _ (ClearReplyEventChangeDTO' event) = inField "path" . void $ findQuestionByPath km Nothing event.path
 validateReplyChange km _ _ _ (SetLabelsEventChangeDTO' event) = inField "path" . void $ findQuestionByPath km Nothing event.path
+validateReplyChange km _ _ replies (DeleteItemEventChangeDTO' event) = do
+  void . inField "path" $ findQuestionByPath km (Just replies) event.path
+  inField "itemUuid" $ unless (event.itemUuid `elem` itemsAt event.path replies) (Left $ _ERROR_VALIDATION__PROJECT_EVENT_ITEM_ABSENCE event.itemUuid)
 validateReplyChange _ _ _ _ _ = Right ()
 
 inField :: String -> Either LocaleRecord a -> Either (String, LocaleRecord) a
@@ -156,6 +160,7 @@ validateReplyType _ _ _ _ = Left _ERROR_VALIDATION__PROJECT_EVENT_REPLY_TYPE_MIS
 applyReplyChange :: M.Map String ReplyValue -> ProjectEventChangeDTO -> M.Map String ReplyValue
 applyReplyChange replies (SetReplyEventChangeDTO' event) = M.insert event.path event.value replies
 applyReplyChange replies (ClearReplyEventChangeDTO' event) = M.delete event.path replies
+applyReplyChange replies (DeleteItemEventChangeDTO' event) = M.adjust (removeItem event.itemUuid) event.path (deleteItemReplies event.path event.itemUuid replies)
 applyReplyChange replies _ = replies
 
 itemsAt :: String -> M.Map String ReplyValue -> [U.UUID]
@@ -173,6 +178,7 @@ readsCurrentReplies (SetReplyEventChangeDTO' event) =
   case event.value of
     ItemSelectReply _ -> True
     _ -> length (splitOn "." event.path) > 2
+readsCurrentReplies (DeleteItemEventChangeDTO' _) = True
 readsCurrentReplies _ = False
 
 readsProjectFiles :: ProjectEventChangeDTO -> Bool
@@ -186,4 +192,5 @@ hasReplyPath :: ProjectEventChangeDTO -> Bool
 hasReplyPath (SetReplyEventChangeDTO' _) = True
 hasReplyPath (ClearReplyEventChangeDTO' _) = True
 hasReplyPath (SetLabelsEventChangeDTO' _) = True
+hasReplyPath (DeleteItemEventChangeDTO' _) = True
 hasReplyPath _ = False

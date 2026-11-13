@@ -27,3 +27,6 @@ instance ToSchema SetPhaseEventList where
 
 instance ToSchema SetLabelsEventList where
   declareNamedSchema = toSwagger (toSetLabelsEventList (slble_rQ2 project1.uuid) (Just userAlbert))
+
+instance ToSchema DeleteItemEventList where
+  declareNamedSchema = toSwagger (toDeleteItemEventList (dite_rQ4_it1 project1.uuid) (Just userAlbert))

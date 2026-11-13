@@ -1,6 +1,6 @@
 module Shared.Database.Mapping.Project.ProjectEvent where
 
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, listToMaybe, maybeToList)
 import qualified Data.Text as T
 import qualified Data.UUID as U
 import Database.PostgreSQL.Simple
@@ -111,6 +111,18 @@ instance ToRow ProjectEvent where
     , toField . PGArray $ value
     , toField (Nothing :: Maybe String)
     ]
+  toRow (DeleteItemEvent' DeleteItemEvent {..}) =
+    [ toField uuid
+    , toField DeleteItemEventType
+    , toField path
+    , toField createdAt
+    , toField createdBy
+    , toField projectUuid
+    , toField tenantUuid
+    , toField (Nothing :: Maybe String)
+    , toField . PGArray $ U.toString itemUuid : maybeToList itemTitle
+    , toField (Nothing :: Maybe String)
+    ]
 
 instance FromRow ProjectEvent where
   fromRow = do
@@ -163,6 +175,18 @@ instance FromRow ProjectEvent where
             , createdBy = createdBy
             , createdAt = createdAt
             }
+      DeleteItemEventType ->
+        return . DeleteItemEvent' $
+          DeleteItemEvent
+            { uuid = uuid
+            , path = fromJust mPath
+            , itemUuid = u' . head $ valueText
+            , itemTitle = listToMaybe . drop 1 $ valueText
+            , projectUuid = projectUuid
+            , tenantUuid = tenantUuid
+            , createdBy = createdBy
+            , createdAt = createdAt
+            }
 
 parseValue valueType valueText mValueRaw =
   case valueType of
@@ -203,6 +227,7 @@ data ProjectEventType
   | ClearReplyEventType
   | SetPhaseEventType
   | SetLabelsEventType
+  | DeleteItemEventType
   deriving (Show, Read, Eq, Ord, Generic)
 
 instance FromField ProjectEventType where
@@ -215,6 +240,7 @@ instance FromField ProjectEventType where
           "ClearReplyEvent" -> pure ClearReplyEventType
           "SetPhaseEvent" -> pure SetPhaseEventType
           "SetLabelsEvent" -> pure SetLabelsEventType
+          "DeleteItemEvent" -> pure DeleteItemEventType
           _ -> returnError ConversionFailed f "Invalid ENUM value"
       _ -> returnError Incompatible f "Expected project_event_type ENUM"
 
@@ -223,6 +249,7 @@ instance ToField ProjectEventType where
   toField ClearReplyEventType = toField ("ClearReplyEvent" :: T.Text)
   toField SetPhaseEventType = toField ("SetPhaseEvent" :: T.Text)
   toField SetLabelsEventType = toField ("SetLabelsEvent" :: T.Text)
+  toField DeleteItemEventType = toField ("DeleteItemEvent" :: T.Text)
 
 data ProjectReplyType
   = StringReplyType

@@ -11,6 +11,7 @@ data ProjectEvent
   | ClearReplyEvent' ClearReplyEvent
   | SetPhaseEvent' SetPhaseEvent
   | SetLabelsEvent' SetLabelsEvent
+  | DeleteItemEvent' DeleteItemEvent
   deriving (Show, Eq, Generic)
 
 data SetReplyEvent = SetReplyEvent
@@ -85,6 +86,28 @@ instance Eq SetLabelsEvent where
     a.uuid == b.uuid
       && a.path == b.path
       && a.value == b.value
+      && a.projectUuid == b.projectUuid
+      && a.tenantUuid == b.tenantUuid
+      && a.createdBy == b.createdBy
+
+data DeleteItemEvent = DeleteItemEvent
+  { uuid :: U.UUID
+  , path :: String
+  , itemUuid :: U.UUID
+  , itemTitle :: Maybe String
+  , projectUuid :: U.UUID
+  , tenantUuid :: U.UUID
+  , createdBy :: Maybe U.UUID
+  , createdAt :: UTCTime
+  }
+  deriving (Show, Generic)
+
+instance Eq DeleteItemEvent where
+  a == b =
+    a.uuid == b.uuid
+      && a.path == b.path
+      && a.itemUuid == b.itemUuid
+      && a.itemTitle == b.itemTitle
       && a.projectUuid == b.projectUuid
       && a.tenantUuid == b.tenantUuid
       && a.createdBy == b.createdBy

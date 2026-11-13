@@ -21,6 +21,7 @@ instance FromJSON ProjectEventList where
       "ClearReplyEvent" -> parseJSON (Object o) >>= \event -> return (ClearReplyEventList' event)
       "SetPhaseEvent" -> parseJSON (Object o) >>= \event -> return (SetPhaseEventList' event)
       "SetLabelsEvent" -> parseJSON (Object o) >>= \event -> return (SetLabelsEventList' event)
+      "DeleteItemEvent" -> parseJSON (Object o) >>= \event -> return (DeleteItemEventList' event)
       _ -> fail "One of the events has unsupported type"
   parseJSON _ = mzero
 
@@ -48,6 +49,12 @@ instance FromJSON SetLabelsEventList where
 instance ToJSON SetLabelsEventList where
   toJSON = genericToJSON jsonOptions
 
+instance FromJSON DeleteItemEventList where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON DeleteItemEventList where
+  toJSON = genericToJSON jsonOptions
+
 instance JsonSchema ProjectEventList where
   jsonSchema _ =
     anyOfSchema
@@ -55,6 +62,7 @@ instance JsonSchema ProjectEventList where
       , eventSchema "ClearReplyEvent" (Proxy :: Proxy ClearReplyEventList)
       , eventSchema "SetPhaseEvent" (Proxy :: Proxy SetPhaseEventList)
       , eventSchema "SetLabelsEvent" (Proxy :: Proxy SetLabelsEventList)
+      , eventSchema "DeleteItemEvent" (Proxy :: Proxy DeleteItemEventList)
       ]
 
 eventSchema :: JsonSchema a => String -> Proxy a -> Value
@@ -70,4 +78,7 @@ instance JsonSchema SetPhaseEventList where
   jsonSchema = genericJsonSchema jsonOptions
 
 instance JsonSchema SetLabelsEventList where
+  jsonSchema = genericJsonSchema jsonOptions
+
+instance JsonSchema DeleteItemEventList where
   jsonSchema = genericJsonSchema jsonOptions

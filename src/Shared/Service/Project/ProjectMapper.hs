@@ -49,6 +49,7 @@ import Shared.Model.User.UserGroup
 import Shared.Service.Acl.AclMapper
 import qualified Shared.Service.KnowledgeModel.Package.KnowledgeModelPackageMapper as SPM
 import Shared.Service.Project.Event.ProjectEventMapper
+import Shared.Util.Date (batchTimestamps)
 
 toDTO :: Project -> KnowledgeModelPackage -> KnowledgeModelProjectState -> Maybe DocumentTemplateProjectState -> [ProjectPermDTO] -> ProjectDTO
 toDTO project kmPackage knowledgeModelState documentTemplateState permissions =
@@ -367,7 +368,7 @@ fromProjectCreateDTO dto projectUuid visibility sharing mCurrentUserUuid permiss
 
 fromContentChangeDTO :: Project -> [ProjectEvent] -> ProjectContentChangeDTO -> Maybe UserDTO -> UTCTime -> (Project, [ProjectEvent])
 fromContentChangeDTO project events dto mCurrentUser now =
-  let newTodoEvents = fmap (\e -> fromEventChangeDTO e project.uuid project.tenantUuid (fmap (.uuid) mCurrentUser) now) dto.events
+  let newTodoEvents = zipWith (\createdAt e -> fromEventChangeDTO e project.uuid project.tenantUuid (fmap (.uuid) mCurrentUser) createdAt) (batchTimestamps now) dto.events
       updatedEvents = events ++ newTodoEvents
    in (project {updatedAt = now}, updatedEvents)
 

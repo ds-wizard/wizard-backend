@@ -9,6 +9,7 @@ import Specs.Api.Handler.Project.Detail_WS.AssignCommentThreadSpec
 import Specs.Api.Handler.Project.Detail_WS.ClearReplySpec
 import Specs.Api.Handler.Project.Detail_WS.DeleteCommentSpec
 import Specs.Api.Handler.Project.Detail_WS.DeleteCommentThreadSpec
+import Specs.Api.Handler.Project.Detail_WS.DeleteItemSpec
 import Specs.Api.Handler.Project.Detail_WS.DeliverySpec
 import Specs.Api.Handler.Project.Detail_WS.EditCommentSpec
 import Specs.Api.Handler.Project.Detail_WS.EventBatchSpec
@@ -29,6 +30,7 @@ projectWebsocketAPI requestContext =
     deliverySpec requestContext
     setReplySpec requestContext
     clearReplySpec requestContext
+    deleteItemSpec requestContext
     setPhaseSpec requestContext
     setLabelsSpec requestContext
     resolveCommentThreadSpec requestContext

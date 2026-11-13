@@ -12,6 +12,7 @@ data ProjectEventDTO
   | ClearReplyEventDTO' ClearReplyEventDTO
   | SetPhaseEventDTO' SetPhaseEventDTO
   | SetLabelsEventDTO' SetLabelsEventDTO
+  | DeleteItemEventDTO' DeleteItemEventDTO
   | ResolveCommentThreadEventDTO' ResolveCommentThreadEventDTO
   | ReopenCommentThreadEventDTO' ReopenCommentThreadEventDTO
   | AssignCommentThreadEventDTO' AssignCommentThreadEventDTO
@@ -79,6 +80,24 @@ instance Eq SetLabelsEventDTO where
     a.uuid == b.uuid
       && a.path == b.path
       && a.value == b.value
+      && a.createdBy == b.createdBy
+
+data DeleteItemEventDTO = DeleteItemEventDTO
+  { uuid :: U.UUID
+  , path :: String
+  , itemUuid :: U.UUID
+  , itemTitle :: Maybe String
+  , createdBy :: Maybe UserSuggestion
+  , createdAt :: UTCTime
+  }
+  deriving (Show, Generic)
+
+instance Eq DeleteItemEventDTO where
+  a == b =
+    a.uuid == b.uuid
+      && a.path == b.path
+      && a.itemUuid == b.itemUuid
+      && a.itemTitle == b.itemTitle
       && a.createdBy == b.createdBy
 
 data ResolveCommentThreadEventDTO = ResolveCommentThreadEventDTO

@@ -20,6 +20,7 @@ instance FromJSON ProjectEventDTO where
       "ClearReplyEvent" -> parseJSON (Object o) >>= \event -> return (ClearReplyEventDTO' event)
       "SetPhaseEvent" -> parseJSON (Object o) >>= \event -> return (SetPhaseEventDTO' event)
       "SetLabelsEvent" -> parseJSON (Object o) >>= \event -> return (SetLabelsEventDTO' event)
+      "DeleteItemEvent" -> parseJSON (Object o) >>= \event -> return (DeleteItemEventDTO' event)
       "ResolveCommentThreadEvent" -> parseJSON (Object o) >>= \event -> return (ResolveCommentThreadEventDTO' event)
       "ReopenCommentThreadEvent" -> parseJSON (Object o) >>= \event -> return (ReopenCommentThreadEventDTO' event)
       "AssignCommentThreadEvent" -> parseJSON (Object o) >>= \event -> return (AssignCommentThreadEventDTO' event)
@@ -52,6 +53,12 @@ instance FromJSON SetLabelsEventDTO where
   parseJSON = genericParseJSON jsonOptions
 
 instance ToJSON SetLabelsEventDTO where
+  toJSON = genericToJSON (jsonOptionsWithTypeField "type")
+
+instance FromJSON DeleteItemEventDTO where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON DeleteItemEventDTO where
   toJSON = genericToJSON (jsonOptionsWithTypeField "type")
 
 instance FromJSON ResolveCommentThreadEventDTO where
@@ -109,6 +116,7 @@ instance FromJSON ProjectEvent where
       "ClearReplyEvent" -> parseJSON (Object o) >>= \event -> return (ClearReplyEvent' event)
       "SetPhaseEvent" -> parseJSON (Object o) >>= \event -> return (SetPhaseEvent' event)
       "SetLabelsEvent" -> parseJSON (Object o) >>= \event -> return (SetLabelsEvent' event)
+      "DeleteItemEvent" -> parseJSON (Object o) >>= \event -> return (DeleteItemEvent' event)
       _ -> fail "One of the events has unsupported type"
   parseJSON _ = mzero
 
@@ -134,4 +142,10 @@ instance FromJSON SetLabelsEvent where
   parseJSON = genericParseJSON jsonOptions
 
 instance ToJSON SetLabelsEvent where
+  toJSON = genericToJSON (jsonOptionsWithTypeField "type")
+
+instance FromJSON DeleteItemEvent where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON DeleteItemEvent where
   toJSON = genericToJSON (jsonOptionsWithTypeField "type")

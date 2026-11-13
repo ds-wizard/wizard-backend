@@ -1,6 +1,6 @@
 module Shared.Database.Mapping.Project.ProjectEventList where
 
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, listToMaybe)
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromRow
 
@@ -46,6 +46,16 @@ instance FromRow ProjectEventList where
             { uuid = uuid
             , path = fromJust mPath
             , value = fmap u' valueText
+            , createdBy = createdBy
+            , createdAt = createdAt
+            }
+      DeleteItemEventType ->
+        return . DeleteItemEventList' $
+          DeleteItemEventList
+            { uuid = uuid
+            , path = fromJust mPath
+            , itemUuid = u' . head $ valueText
+            , itemTitle = listToMaybe . drop 1 $ valueText
             , createdBy = createdBy
             , createdAt = createdAt
             }

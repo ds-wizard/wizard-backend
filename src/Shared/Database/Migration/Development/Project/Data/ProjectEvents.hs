@@ -358,6 +358,38 @@ slble_rQ2 projectUuid =
     , createdAt = UTCTime (fromJust $ fromGregorianValid 2018 1 21) 22
     }
 
+dite_rQ4_it1' :: U.UUID -> ProjectEvent
+dite_rQ4_it1' = DeleteItemEvent' . dite_rQ4_it1
+
+dite_rQ4_it1 :: U.UUID -> DeleteItemEvent
+dite_rQ4_it1 projectUuid =
+  DeleteItemEvent
+    { uuid = createEventUuid projectUuid "6d1f0a3b9c47"
+    , path = fst rQ4WithDeletedItem
+    , itemUuid = rQ4_it1
+    , itemTitle = Just "First item"
+    , projectUuid = projectUuid
+    , tenantUuid = defaultTenantUuid
+    , createdBy = fmap (.uuid) (snd rQ4WithDeletedItem).createdBy
+    , createdAt = (snd rQ4WithDeletedItem).createdAt
+    }
+
+dite_rQ4_it1_q5_it1' :: U.UUID -> ProjectEvent
+dite_rQ4_it1_q5_it1' = DeleteItemEvent' . dite_rQ4_it1_q5_it1
+
+dite_rQ4_it1_q5_it1 :: U.UUID -> DeleteItemEvent
+dite_rQ4_it1_q5_it1 projectUuid =
+  DeleteItemEvent
+    { uuid = createEventUuid projectUuid "7e2b1c4d8a50"
+    , path = fst rQ4_it1_q5WithDeletedItem
+    , itemUuid = rQ4_it1_q5_it1
+    , itemTitle = Nothing
+    , projectUuid = projectUuid
+    , tenantUuid = defaultTenantUuid
+    , createdBy = fmap (.uuid) (snd rQ4_it1_q5WithDeletedItem).createdBy
+    , createdAt = (snd rQ4_it1_q5WithDeletedItem).createdAt
+    }
+
 rte_rQ1_t1' :: ProjectEventDTO
 rte_rQ1_t1' = ResolveCommentThreadEventDTO' rte_rQ1_t1
 

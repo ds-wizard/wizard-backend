@@ -11,6 +11,7 @@ data ProjectEventChangeDTO
   | ClearReplyEventChangeDTO' ClearReplyEventChangeDTO
   | SetPhaseEventChangeDTO' SetPhaseEventChangeDTO
   | SetLabelsEventChangeDTO' SetLabelsEventChangeDTO
+  | DeleteItemEventChangeDTO' DeleteItemEventChangeDTO
   | ResolveCommentThreadEventChangeDTO' ResolveCommentThreadEventChangeDTO
   | ReopenCommentThreadEventChangeDTO' ReopenCommentThreadEventChangeDTO
   | AssignCommentThreadEventChangeDTO' AssignCommentThreadEventChangeDTO
@@ -43,6 +44,14 @@ data SetLabelsEventChangeDTO = SetLabelsEventChangeDTO
   { uuid :: U.UUID
   , path :: String
   , value :: [U.UUID]
+  }
+  deriving (Show, Eq, Generic)
+
+data DeleteItemEventChangeDTO = DeleteItemEventChangeDTO
+  { uuid :: U.UUID
+  , path :: String
+  , itemUuid :: U.UUID
+  , itemTitle :: Maybe String
   }
   deriving (Show, Eq, Generic)
 

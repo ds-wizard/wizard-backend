@@ -1,6 +1,7 @@
 module Specs.Api.Handler.Project.Common where
 
 import Data.Either (isLeft, isRight)
+import qualified Data.Map.Strict as M
 import qualified Data.UUID as U
 import Test.Hspec
 import Test.Hspec.Wai hiding (shouldRespondWith)
@@ -19,8 +20,11 @@ import Shared.Database.Migration.Development.Tenant.Data.WizardTenants
 import Shared.Localization.Messages.Public
 import Shared.Model.Error.Error
 import Shared.Model.Project.Project
+import Shared.Model.Project.ProjectContent
+import Shared.Model.Project.ProjectReply
 import Shared.Model.Settings.Settings
 import Shared.Model.Tenant.Tenant
+import Shared.Service.Project.Compiler.ProjectCompilerService
 
 import Specs.Common
 
@@ -49,6 +53,10 @@ assertExistenceOfProjectContentInDB requestContext projectUuid content = do
   liftIO $ isRight eProjectEvents `shouldBe` True
   let (Right projectEventsFromDb) = eProjectEvents
   compareProjectContentDtos projectEventsFromDb content
+
+assertProjectReplyValuesInDB requestContext projectUuid expValues = do
+  eProjectEvents <- runInContextIO (findProjectEventListsByProjectUuid projectUuid) requestContext
+  liftIO $ fmap (fmap (.value) . (.replies) . compileProjectEvents) eProjectEvents `shouldBe` Right (expValues :: M.Map String ReplyValue)
 
 assertAbsenceOfProjectInDB requestContext project = do
   eProject <- runInContextIO (findProjectByUuid project.uuid) requestContext

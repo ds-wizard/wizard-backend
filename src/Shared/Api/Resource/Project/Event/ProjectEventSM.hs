@@ -28,6 +28,9 @@ instance ToSchema SetPhaseEventDTO where
 instance ToSchema SetLabelsEventDTO where
   declareNamedSchema = toSwagger (toSetLabelsEventDTO (slble_rQ2 project1.uuid) (Just userAlbert))
 
+instance ToSchema DeleteItemEventDTO where
+  declareNamedSchema = toSwagger (toDeleteItemEventDTO (dite_rQ4_it1 project1.uuid) (Just userAlbert))
+
 instance ToSchema ResolveCommentThreadEventDTO where
   declareNamedSchema = toSwagger rte_rQ1_t1
 

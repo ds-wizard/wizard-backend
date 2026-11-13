@@ -19,6 +19,7 @@ instance FromJSON ProjectEventChangeDTO where
       "ClearReplyEvent" -> parseJSON (Object o) >>= \event -> return (ClearReplyEventChangeDTO' event)
       "SetPhaseEvent" -> parseJSON (Object o) >>= \event -> return (SetPhaseEventChangeDTO' event)
       "SetLabelsEvent" -> parseJSON (Object o) >>= \event -> return (SetLabelsEventChangeDTO' event)
+      "DeleteItemEvent" -> parseJSON (Object o) >>= \event -> return (DeleteItemEventChangeDTO' event)
       "ResolveCommentThreadEvent" -> parseJSON (Object o) >>= \event -> return (ResolveCommentThreadEventChangeDTO' event)
       "ReopenCommentThreadEvent" -> parseJSON (Object o) >>= \event -> return (ReopenCommentThreadEventChangeDTO' event)
       "AssignCommentThreadEvent" -> parseJSON (Object o) >>= \event -> return (AssignCommentThreadEventChangeDTO' event)
@@ -51,6 +52,12 @@ instance FromJSON SetLabelsEventChangeDTO where
   parseJSON = genericParseJSON jsonOptions
 
 instance ToJSON SetLabelsEventChangeDTO where
+  toJSON = genericToJSON jsonOptions
+
+instance FromJSON DeleteItemEventChangeDTO where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON DeleteItemEventChangeDTO where
   toJSON = genericToJSON jsonOptions
 
 instance FromJSON ResolveCommentThreadEventChangeDTO where

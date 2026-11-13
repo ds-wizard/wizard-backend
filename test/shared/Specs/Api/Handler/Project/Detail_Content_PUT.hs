@@ -26,6 +26,7 @@ import Shared.Database.Migration.Development.KnowledgeModel.Data.Package.Knowled
 import Shared.Database.Migration.Development.KnowledgeModel.Data.Questions
 import Shared.Database.Migration.Development.Project.Data.ProjectEventBatches
 import Shared.Database.Migration.Development.Project.Data.ProjectEvents
+import Shared.Database.Migration.Development.Project.Data.ProjectReplies
 import Shared.Database.Migration.Development.Project.Data.Projects
 import qualified Shared.Database.Migration.Development.Project.ProjectMigration as PRJ
 import qualified Shared.Database.Migration.Development.User.UserMigration as U
@@ -35,6 +36,7 @@ import Shared.Localization.Messages.WizardPublic
 import Shared.Model.Error.Error
 import Shared.Model.KnowledgeModel.KnowledgeModel
 import Shared.Model.Project.Project
+import Shared.Model.Project.ProjectReply
 import Shared.Model.Project.ProjectUtil
 import Shared.Util.Uuid
 import WizardServer.Model.Context.RequestContext
@@ -80,6 +82,27 @@ test_200 requestContext = do
   create_test_200 "HTTP 200 OK (Owner, VisibleView)" requestContext project2 project2EventsEdited [reqAuthHeader]
   create_test_200 "HTTP 200 OK (Non-Owner, Public)" requestContext project3 project3EventsEdited [reqAuthHeader]
   create_test_200 "HTTP 200 OK (Anonymous, Public, Sharing" requestContext project10 project10EventsEdited []
+  it "HTTP 200 OK with a list reply and a deleted item" $
+    -- GIVEN: Prepare request
+    do
+      let reqDto = ProjectContentChangeDTO {events = [SetReplyEventChangeDTO' srche_rQ4, DeleteItemEventChangeDTO' diche_rQ4_it1]}
+      -- AND: Prepare expectation
+      let expStatus = 200
+      let expHeaders = resCtHeaderPlain : resCorsHeadersPlain
+      let expValues = M.insert (fst rQ4) (ItemListReply [rQ4_it2, rQ4_it3]) (fmap (.value) fRepliesWithDeletedItem)
+      -- AND: Run migrations
+      runInContextIO TML.runMigration requestContext
+      runInContextIO PRJ.runMigration requestContext
+      runInContextIO (traverse_ insertPackageEvent germanyKmPackageEvents) requestContext
+      -- WHEN: Call API
+      response <- request reqMethod (reqUrlT project1.uuid) (reqHeadersT [reqAuthHeader]) (encode reqDto)
+      -- THEN: Compare response with expectation
+      let (status, headers, resBody) = destructResponse response :: (Int, ResponseHeaders, ProjectContentChangeDTO)
+      assertResStatus status expStatus
+      assertResHeaders headers expHeaders
+      compareProjectDtos resBody reqDto
+      -- AND: Find a result in DB
+      assertProjectReplyValuesInDB requestContext project1.uuid expValues
 
 create_test_200 title requestContext project projectEventsEdited authHeader =
   it title $

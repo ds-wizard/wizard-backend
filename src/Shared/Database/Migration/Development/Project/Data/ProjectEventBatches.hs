@@ -137,6 +137,24 @@ sphsche_2 =
     , phaseUuid = Just phase2.uuid
     }
 
+diche_rQ4_it1 :: DeleteItemEventChangeDTO
+diche_rQ4_it1 =
+  DeleteItemEventChangeDTO
+    { uuid = u' "0b1c6f7e-3c55-4c6b-8b0e-2a4d93a1f015"
+    , path = createReplyKey [chapter2.uuid, question4.uuid]
+    , itemUuid = rQ4_it1
+    , itemTitle = Just "First item"
+    }
+
+diche_rQ4_it1_q5_it1 :: DeleteItemEventChangeDTO
+diche_rQ4_it1_q5_it1 =
+  DeleteItemEventChangeDTO
+    { uuid = u' "0b1c6f7e-3c55-4c6b-8b0e-2a4d93a1f016"
+    , path = createReplyKey [chapter2.uuid, question4.uuid, rQ4_it1, q4_it1_question5.uuid]
+    , itemUuid = rQ4_it1_q5_it1
+    , itemTitle = Nothing
+    }
+
 q9AsValueQuestionEvent :: QuestionValueType -> [QuestionValidation] -> KnowledgeModelPackageEvent
 q9AsValueQuestionEvent valueType validations =
   toPackageEvent germanyKmPackage.uuid U.nil $

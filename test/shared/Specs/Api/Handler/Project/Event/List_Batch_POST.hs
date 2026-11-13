@@ -33,6 +33,7 @@ import Shared.Database.Migration.Development.Project.Data.ProjectComments
 import Shared.Database.Migration.Development.Project.Data.ProjectEventBatches
 import Shared.Database.Migration.Development.Project.Data.ProjectEvents
 import Shared.Database.Migration.Development.Project.Data.ProjectFiles
+import Shared.Database.Migration.Development.Project.Data.ProjectReplies
 import Shared.Database.Migration.Development.Project.Data.Projects
 import qualified Shared.Database.Migration.Development.Project.ProjectMigration as PRJ
 import Shared.Database.Migration.Development.User.Data.WizardUsers
@@ -90,6 +91,8 @@ reqBody = encode reqDto
 -- ----------------------------------------------------
 test_201 requestContext = do
   create_test_201 requestContext
+  create_test_201_delete_item requestContext
+  create_test_201_delete_nested_item requestContext
   create_test_201_value "HTTP 201 CREATED with a number" requestContext NumberQuestionValueType [MinNumberQuestionValidation 1, MaxNumberQuestionValidation 5] "3.14"
   create_test_201_value "HTTP 201 CREATED with a date" requestContext DateQuestionValueType [FromDateQuestionValidation "2018-01-01", ToDateQuestionValidation "2018-12-31"] "2018-06-01"
   create_test_201_value "HTTP 201 CREATED with a date time" requestContext DateTimeQuestionValueType [FromDateTimeQuestionValidation "2018-01-21T10:00"] "2018-01-21T10:30"
@@ -121,6 +124,50 @@ create_test_201 requestContext =
       -- AND: Compare state in DB with expectation
       eEventsFromDb <- runInContextIO (findProjectEventsByProjectUuid project1.uuid) requestContext
       liftIO $ fmap (fmap toEventChangeDTO) eEventsFromDb `shouldBe` Right (fmap toEventChangeDTO project1Events ++ batchEvents)
+
+create_test_201_delete_item requestContext =
+  it "HTTP 201 CREATED with a deleted item" $
+    -- GIVEN: Prepare request
+    do
+      let event = DeleteItemEventChangeDTO' diche_rQ4_it1
+      let reqBody = encode (ProjectContentChangeDTO {events = [event]})
+      -- AND: Prepare expectation
+      let expStatus = 201
+      let expHeaders = resCtHeaderPlain : resCorsHeadersPlain
+      let expDto = [toEventDTO' event (Just userAlbertSuggestion) (dt' 2018 1 21)]
+      let expType (a :: [ProjectEventDTO]) = a
+      -- AND: Run migrations
+      runProjectMigrations requestContext
+      -- WHEN: Call API
+      response <- request reqMethod reqUrl reqHeaders reqBody
+      -- THEN: Compare response with expectation
+      assertListResponseWithoutFields expStatus expHeaders expDto expType response ["createdAt"]
+      -- AND: Compare state in DB with expectation
+      eEventsFromDb <- runInContextIO (findProjectEventsByProjectUuid project1.uuid) requestContext
+      liftIO $ fmap (fmap toEventChangeDTO) eEventsFromDb `shouldBe` Right (fmap toEventChangeDTO project1Events ++ [event])
+      assertProjectReplyValuesInDB requestContext project1.uuid (fmap (.value) fRepliesWithDeletedItem)
+
+create_test_201_delete_nested_item requestContext =
+  it "HTTP 201 CREATED with a deleted item of a nested list" $
+    -- GIVEN: Prepare request
+    do
+      let event = DeleteItemEventChangeDTO' diche_rQ4_it1_q5_it1
+      let reqBody = encode (ProjectContentChangeDTO {events = [event]})
+      -- AND: Prepare expectation
+      let expStatus = 201
+      let expHeaders = resCtHeaderPlain : resCorsHeadersPlain
+      let expDto = [toEventDTO' event (Just userAlbertSuggestion) (dt' 2018 1 21)]
+      let expType (a :: [ProjectEventDTO]) = a
+      -- AND: Run migrations
+      runProjectMigrations requestContext
+      -- WHEN: Call API
+      response <- request reqMethod reqUrl reqHeaders reqBody
+      -- THEN: Compare response with expectation
+      assertListResponseWithoutFields expStatus expHeaders expDto expType response ["createdAt"]
+      -- AND: Compare state in DB with expectation
+      eEventsFromDb <- runInContextIO (findProjectEventsByProjectUuid project1.uuid) requestContext
+      liftIO $ fmap (fmap toEventChangeDTO) eEventsFromDb `shouldBe` Right (fmap toEventChangeDTO project1Events ++ [event])
+      assertProjectReplyValuesInDB requestContext project1.uuid (fmap (.value) fRepliesWithDeletedNestedItem)
 
 create_test_201_value title requestContext valueType validations value =
   it title $
@@ -184,6 +231,16 @@ test_400 requestContext = do
     requestContext
     [SetLabelsEventChangeDTO' (slblche_rQ2 {path = createReplyKey [chapter2.uuid, question2.uuid]} :: SetLabelsEventChangeDTO)]
     [("events[0].path", _ERROR_VALIDATION__PROJECT_EVENT_PATH_ABSENCE (createReplyKey [chapter2.uuid, question2.uuid]))]
+  create_test_400
+    "HTTP 400 BAD REQUEST if the path of a deleted item doesn't match the knowledge model"
+    requestContext
+    [DeleteItemEventChangeDTO' (diche_rQ4_it1 {path = createReplyKey [chapter1.uuid, question4.uuid]} :: DeleteItemEventChangeDTO)]
+    [("events[0].path", _ERROR_VALIDATION__PROJECT_EVENT_PATH_ABSENCE (createReplyKey [chapter1.uuid, question4.uuid]))]
+  create_test_400
+    "HTTP 400 BAD REQUEST if the deleted item doesn't exist"
+    requestContext
+    [DeleteItemEventChangeDTO' (diche_rQ4_it1 {itemUuid = rQ4_it3} :: DeleteItemEventChangeDTO)]
+    [("events[0].itemUuid", _ERROR_VALIDATION__PROJECT_EVENT_ITEM_ABSENCE rQ4_it3)]
   create_test_400
     "HTTP 400 BAD REQUEST if the reply doesn't match the question type"
     requestContext

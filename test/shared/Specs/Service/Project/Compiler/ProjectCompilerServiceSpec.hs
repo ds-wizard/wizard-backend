@@ -1,5 +1,6 @@
 module Specs.Service.Project.Compiler.ProjectCompilerServiceSpec where
 
+import qualified Data.Map.Strict as M
 import Test.Hspec
 
 import Shared.Database.Migration.Development.Project.Data.ProjectEvents
@@ -47,3 +48,21 @@ projectCompilerServiceSpec =
           let updatedProjectCtn = applyEvent project1Ctn event
           -- THEN:
           updatedProjectCtn.labels `shouldBe` fLabelsEdited
+      it "DeleteItemEvent" $
+        -- GIVEN:
+        do
+          let projectCtn = project1Ctn {labels = M.insert (fst rQ4_it1_q6) [fLabel1] fLabels}
+          let event = toEventList (dite_rQ4_it1' project1Uuid) (Just userAlbert)
+          -- WHEN:
+          let updatedProjectCtn = applyEvent projectCtn event
+          -- THEN:
+          updatedProjectCtn.replies `shouldBe` fRepliesWithDeletedItem
+          updatedProjectCtn.labels `shouldBe` fLabels
+      it "DeleteItemEvent in a nested list" $
+        -- GIVEN:
+        do
+          let event = toEventList (dite_rQ4_it1_q5_it1' project1Uuid) (Just userAlbert)
+          -- WHEN:
+          let updatedProjectCtn = applyEvent project1Ctn event
+          -- THEN:
+          updatedProjectCtn.replies `shouldBe` fRepliesWithDeletedNestedItem

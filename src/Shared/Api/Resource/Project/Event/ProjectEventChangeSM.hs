@@ -32,6 +32,10 @@ instance ToSchema SetLabelsEventChangeDTO where
   declareNamedSchema =
     toSwagger (toSetLabelsEventChangeDTO (slble_rQ2 project1.uuid))
 
+instance ToSchema DeleteItemEventChangeDTO where
+  declareNamedSchema =
+    toSwagger (toDeleteItemEventChangeDTO (dite_rQ4_it1 project1.uuid))
+
 instance ToSchema ResolveCommentThreadEventChangeDTO where
   declareNamedSchema = toSwagger rtche_rQ1_t1
 

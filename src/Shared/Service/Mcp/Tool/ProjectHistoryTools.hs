@@ -141,11 +141,11 @@ deleteProjectVersionTool =
 
 listProjectEventsTool :: WizardRequestContextC s m => McpTool m
 listProjectEventsTool =
-  markThirdPartyFields [["_embedded", "projectEvents", "value"]] $
+  markThirdPartyFields [["_embedded", "projectEvents", "value"], ["_embedded", "projectEvents", "itemTitle"]] $
     McpTool
       { name = "list_project_events"
       , title = "List project events"
-      , description = "List the history of a project, newest first: every reply set or cleared, phase and label change, with who made it and when"
+      , description = "List the history of a project, newest first: every reply set or cleared, list item deleted, phase and label change, with who made it and when"
       , inputSchema = argumentsSchema arguments
       , outputSchema = Just $ pageSchema "projectEvents" (jsonSchema (Proxy :: Proxy ProjectEventList))
       , annotations = readOnlyAnnotations
@@ -160,7 +160,7 @@ listProjectEventsTool =
 
 getProjectEventTool :: WizardRequestContextC s m => McpTool m
 getProjectEventTool =
-  markThirdPartyFields [["value"]] $
+  markThirdPartyFields [["value"], ["itemTitle"]] $
     McpTool
       { name = "get_project_event"
       , title = "Get project event"

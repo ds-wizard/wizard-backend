@@ -86,6 +86,21 @@ projectEventServiceSpec =
         let resultEvents = squash versions events
         -- THEN:
         resultEvents `shouldBe` expEvents
+    it "squash keeps a deleted item" $
+      -- GIVEN: prepare data
+      do
+        let events =
+              [ setCreatedAt contributors_event1 (dt'' 2018 1 21 1)
+              , setCreatedAt contributors_event2 (dt'' 2018 1 21 2)
+              , setCreatedAt contributor2_name_event (dt'' 2018 1 21 3)
+              , setCreatedAt contributor2_delete_event (dt'' 2018 1 21 4)
+              ]
+        -- AND: prepare expectation
+        let expEvents = drop 1 events
+        -- WHEN:
+        let resultEvents = squash [] events
+        -- THEN:
+        resultEvents `shouldBe` expEvents
 
 projectEventServiceIntegrationSpec requestContext =
   describe "ProjectEventService" $ do
@@ -322,6 +337,20 @@ contributor2_name_event =
       , tenantUuid = defaultTenantUuid
       , createdBy = albert
       , createdAt = dt'' 2018 1 21 3
+      }
+
+contributor2_delete_event :: ProjectEvent
+contributor2_delete_event =
+  DeleteItemEvent' $
+    DeleteItemEvent
+      { uuid = createEventUuid project1Uuid "9d0a6b1f74e5"
+      , path = "contributors"
+      , itemUuid = contributor2Uuid
+      , itemTitle = Just "contributor_2"
+      , projectUuid = project1Uuid
+      , tenantUuid = defaultTenantUuid
+      , createdBy = albert
+      , createdAt = dt'' 2018 1 21 4
       }
 
 contributor1Uuid :: U.UUID

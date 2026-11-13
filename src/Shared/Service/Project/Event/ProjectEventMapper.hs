@@ -20,6 +20,7 @@ toEventDTO event' mCreatedBy =
     ClearReplyEvent' event@ClearReplyEvent {..} -> ClearReplyEventDTO' $ toClearReplyEventDTO event mCreatedBy
     SetPhaseEvent' event@SetPhaseEvent {..} -> SetPhaseEventDTO' $ toSetPhaseEventDTO event mCreatedBy
     SetLabelsEvent' event@SetLabelsEvent {..} -> SetLabelsEventDTO' $ toSetLabelsEventDTO event mCreatedBy
+    DeleteItemEvent' event@DeleteItemEvent {..} -> DeleteItemEventDTO' $ toDeleteItemEventDTO event mCreatedBy
 
 toEventList :: ProjectEvent -> Maybe User -> ProjectEventList
 toEventList event' mCreatedBy =
@@ -28,6 +29,7 @@ toEventList event' mCreatedBy =
     ClearReplyEvent' event@ClearReplyEvent {..} -> ClearReplyEventList' $ toClearReplyEventList event mCreatedBy
     SetPhaseEvent' event@SetPhaseEvent {..} -> SetPhaseEventList' $ toSetPhaseEventList event mCreatedBy
     SetLabelsEvent' event@SetLabelsEvent {..} -> SetLabelsEventList' $ toSetLabelsEventList event mCreatedBy
+    DeleteItemEvent' event@DeleteItemEvent {..} -> DeleteItemEventList' $ toDeleteItemEventList event mCreatedBy
 
 toEvent :: U.UUID -> U.UUID -> ProjectEventList -> ProjectEvent
 toEvent projectUuid tenantUuid event' =
@@ -36,6 +38,7 @@ toEvent projectUuid tenantUuid event' =
     ClearReplyEventList' event@ClearReplyEventList {..} -> ClearReplyEvent' $ toClearReplyEvent projectUuid tenantUuid event
     SetPhaseEventList' event@SetPhaseEventList {..} -> SetPhaseEvent' $ toSetPhaseEvent projectUuid tenantUuid event
     SetLabelsEventList' event@SetLabelsEventList {..} -> SetLabelsEvent' $ toSetLabelsEvent projectUuid tenantUuid event
+    DeleteItemEventList' event@DeleteItemEventList {..} -> DeleteItemEvent' $ toDeleteItemEvent projectUuid tenantUuid event
 
 toSetReplyEventDTO :: SetReplyEvent -> Maybe User -> SetReplyEventDTO
 toSetReplyEventDTO event user =
@@ -159,6 +162,41 @@ toSetLabelsEvent projectUuid tenantUuid event =
     , createdAt = event.createdAt
     }
 
+toDeleteItemEventDTO :: DeleteItemEvent -> Maybe User -> DeleteItemEventDTO
+toDeleteItemEventDTO event user =
+  DeleteItemEventDTO
+    { uuid = event.uuid
+    , path = event.path
+    , itemUuid = event.itemUuid
+    , itemTitle = event.itemTitle
+    , createdBy = fmap (UM.toSuggestion . UM.toSimple) user
+    , createdAt = event.createdAt
+    }
+
+toDeleteItemEventList :: DeleteItemEvent -> Maybe User -> DeleteItemEventList
+toDeleteItemEventList event user =
+  DeleteItemEventList
+    { uuid = event.uuid
+    , path = event.path
+    , itemUuid = event.itemUuid
+    , itemTitle = event.itemTitle
+    , createdBy = fmap (UM.toSuggestion . UM.toSimple) user
+    , createdAt = event.createdAt
+    }
+
+toDeleteItemEvent :: U.UUID -> U.UUID -> DeleteItemEventList -> DeleteItemEvent
+toDeleteItemEvent projectUuid tenantUuid event =
+  DeleteItemEvent
+    { uuid = event.uuid
+    , path = event.path
+    , itemUuid = event.itemUuid
+    , itemTitle = event.itemTitle
+    , projectUuid = projectUuid
+    , tenantUuid = tenantUuid
+    , createdBy = fmap (.uuid) event.createdBy
+    , createdAt = event.createdAt
+    }
+
 -- ---------------------------------------------------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------------------------------------------------
 toEventDTO' :: ProjectEventChangeDTO -> Maybe UserSuggestion -> UTCTime -> ProjectEventDTO
@@ -168,6 +206,7 @@ toEventDTO' event mCreatedBy now =
     ClearReplyEventChangeDTO' event@ClearReplyEventChangeDTO {..} -> ClearReplyEventDTO' $ toClearReplyEventDTO' event mCreatedBy now
     SetPhaseEventChangeDTO' event@SetPhaseEventChangeDTO {..} -> SetPhaseEventDTO' $ toSetPhaseEventDTO' event mCreatedBy now
     SetLabelsEventChangeDTO' event@SetLabelsEventChangeDTO {..} -> SetLabelsEventDTO' $ toSetLabelsEventDTO' event mCreatedBy now
+    DeleteItemEventChangeDTO' event@DeleteItemEventChangeDTO {..} -> DeleteItemEventDTO' $ toDeleteItemEventDTO' event mCreatedBy now
     ResolveCommentThreadEventChangeDTO' event@ResolveCommentThreadEventChangeDTO {..} -> ResolveCommentThreadEventDTO' $ toResolveCommentThreadEventDTO' event mCreatedBy now
     ReopenCommentThreadEventChangeDTO' event@ReopenCommentThreadEventChangeDTO {..} -> ReopenCommentThreadEventDTO' $ toReopenCommentThreadEventDTO' event mCreatedBy now
     AssignCommentThreadEventChangeDTO' event@AssignCommentThreadEventChangeDTO {..} -> AssignCommentThreadEventDTO' $ toAssignCommentThreadEventDTO' event mCreatedBy now
@@ -210,6 +249,17 @@ toSetLabelsEventDTO' event mCreatedBy now =
     { uuid = event.uuid
     , path = event.path
     , value = event.value
+    , createdBy = mCreatedBy
+    , createdAt = now
+    }
+
+toDeleteItemEventDTO' :: DeleteItemEventChangeDTO -> Maybe UserSuggestion -> UTCTime -> DeleteItemEventDTO
+toDeleteItemEventDTO' event mCreatedBy now =
+  DeleteItemEventDTO
+    { uuid = event.uuid
+    , path = event.path
+    , itemUuid = event.itemUuid
+    , itemTitle = event.itemTitle
     , createdBy = mCreatedBy
     , createdAt = now
     }
@@ -325,6 +375,8 @@ toEventChangeDTO event =
       SetPhaseEventChangeDTO' $ toSetPhaseEventChangeDTO event
     SetLabelsEvent' event@SetLabelsEvent {..} ->
       SetLabelsEventChangeDTO' $ toSetLabelsEventChangeDTO event
+    DeleteItemEvent' event@DeleteItemEvent {..} ->
+      DeleteItemEventChangeDTO' $ toDeleteItemEventChangeDTO event
 
 toSetReplyEventChangeDTO :: SetReplyEvent -> SetReplyEventChangeDTO
 toSetReplyEventChangeDTO event =
@@ -356,6 +408,15 @@ toSetLabelsEventChangeDTO event =
     , value = event.value
     }
 
+toDeleteItemEventChangeDTO :: DeleteItemEvent -> DeleteItemEventChangeDTO
+toDeleteItemEventChangeDTO event =
+  DeleteItemEventChangeDTO
+    { uuid = event.uuid
+    , path = event.path
+    , itemUuid = event.itemUuid
+    , itemTitle = event.itemTitle
+    }
+
 -- ---------------------------------------------------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------------------------------------------------
 fromEventChangeDTO :: ProjectEventChangeDTO -> U.UUID -> U.UUID -> Maybe U.UUID -> UTCTime -> ProjectEvent
@@ -369,6 +430,8 @@ fromEventChangeDTO event projectUuid tenantUuid createdBy now =
       SetPhaseEvent' $ fromSetPhaseEventChangeDTO event projectUuid tenantUuid createdBy now
     SetLabelsEventChangeDTO' event@SetLabelsEventChangeDTO {..} ->
       SetLabelsEvent' $ fromSetLabelsEventChangeDTO event projectUuid tenantUuid createdBy now
+    DeleteItemEventChangeDTO' event@DeleteItemEventChangeDTO {..} ->
+      DeleteItemEvent' $ fromDeleteItemEventChangeDTO event projectUuid tenantUuid createdBy now
     _ -> error "Unsupported event type in fromEventChangeDTO"
 
 fromSetReplyEventChangeDTO :: SetReplyEventChangeDTO -> U.UUID -> U.UUID -> Maybe U.UUID -> UTCTime -> SetReplyEvent
@@ -411,6 +474,19 @@ fromSetLabelsEventChangeDTO event projectUuid tenantUuid createdBy now =
     { uuid = event.uuid
     , path = event.path
     , value = event.value
+    , projectUuid = projectUuid
+    , tenantUuid = tenantUuid
+    , createdBy = createdBy
+    , createdAt = now
+    }
+
+fromDeleteItemEventChangeDTO :: DeleteItemEventChangeDTO -> U.UUID -> U.UUID -> Maybe U.UUID -> UTCTime -> DeleteItemEvent
+fromDeleteItemEventChangeDTO event projectUuid tenantUuid createdBy now =
+  DeleteItemEvent
+    { uuid = event.uuid
+    , path = event.path
+    , itemUuid = event.itemUuid
+    , itemTitle = event.itemTitle
     , projectUuid = projectUuid
     , tenantUuid = tenantUuid
     , createdBy = createdBy

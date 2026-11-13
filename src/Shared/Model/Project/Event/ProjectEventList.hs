@@ -12,6 +12,7 @@ data ProjectEventList
   | ClearReplyEventList' ClearReplyEventList
   | SetPhaseEventList' SetPhaseEventList
   | SetLabelsEventList' SetLabelsEventList
+  | DeleteItemEventList' DeleteItemEventList
   deriving (Show, Eq, Generic)
 
 data SetReplyEventList = SetReplyEventList
@@ -72,4 +73,22 @@ instance Eq SetLabelsEventList where
     a.uuid == b.uuid
       && a.path == b.path
       && a.value == b.value
+      && a.createdBy == b.createdBy
+
+data DeleteItemEventList = DeleteItemEventList
+  { uuid :: U.UUID
+  , path :: String
+  , itemUuid :: U.UUID
+  , itemTitle :: Maybe String
+  , createdBy :: Maybe UserSuggestion
+  , createdAt :: UTCTime
+  }
+  deriving (Show, Generic)
+
+instance Eq DeleteItemEventList where
+  a == b =
+    a.uuid == b.uuid
+      && a.path == b.path
+      && a.itemUuid == b.itemUuid
+      && a.itemTitle == b.itemTitle
       && a.createdBy == b.createdBy

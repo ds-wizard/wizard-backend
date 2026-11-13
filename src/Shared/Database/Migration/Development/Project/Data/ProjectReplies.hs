@@ -72,6 +72,12 @@ fRepliesWithDeleted =
 fRepliesEdited :: M.Map String Reply
 fRepliesEdited = M.fromList [rQ1, rQ2, rQ2_aYes_fuQ1, rQ3, rQ9, rQ10]
 
+fRepliesWithDeletedItem :: M.Map String Reply
+fRepliesWithDeletedItem = M.fromList [rQ1, rQ2, rQ2_aYes_fuQ1, rQ3, rQ4WithDeletedItem, rQ4_it2_q5, rQ4_it2_q6, rQ9, rQ10]
+
+fRepliesWithDeletedNestedItem :: M.Map String Reply
+fRepliesWithDeletedNestedItem = M.fromList [rQ1, rQ2, rQ2_aYes_fuQ1, rQ3, rQ4, rQ4_it1_q5WithDeletedItem, rQ4_it1_q6, rQ4_it2_q5, rQ4_it2_q6, rQ9, rQ10]
+
 rQ1 :: ReplyTuple
 rQ1 =
   ( createReplyKey [chapter1.uuid, question1.uuid]
@@ -153,6 +159,16 @@ rQ4 =
 rQ4_it1 :: U.UUID
 rQ4_it1 = u' "97e42df3-f0f6-40f8-83ab-375a1340e8ab"
 
+rQ4WithDeletedItem :: ReplyTuple
+rQ4WithDeletedItem =
+  ( fst rQ4
+  , Reply
+      { value = ItemListReply {ilValue = [rQ4_it2]}
+      , createdBy = Just . UM.toSuggestion . UM.toSimple $ userAlbert
+      , createdAt = UTCTime (fromJust $ fromGregorianValid 2018 1 21) 23
+      }
+  )
+
 rQ4_it1_q5 :: ReplyTuple
 rQ4_it1_q5 =
   ( createReplyKey [chapter2.uuid, question4.uuid, rQ4_it1, q4_it1_question5.uuid]
@@ -165,6 +181,16 @@ rQ4_it1_q5 =
 
 rQ4_it1_q5_it1 :: U.UUID
 rQ4_it1_q5_it1 = u' "12c243e0-f300-4178-ae4e-0b30d01c6f73"
+
+rQ4_it1_q5WithDeletedItem :: ReplyTuple
+rQ4_it1_q5WithDeletedItem =
+  ( fst rQ4_it1_q5
+  , Reply
+      { value = ItemListReply {ilValue = []}
+      , createdBy = Just . UM.toSuggestion . UM.toSimple $ userAlbert
+      , createdAt = UTCTime (fromJust $ fromGregorianValid 2018 1 21) 24
+      }
+  )
 
 rQ4_it1_q5_it1_question7 :: ReplyTuple
 rQ4_it1_q5_it1_question7 =

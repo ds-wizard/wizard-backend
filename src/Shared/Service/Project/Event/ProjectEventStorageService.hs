@@ -113,6 +113,7 @@ isQuestionnaireEvent reqDto =
     ClearReplyEventChangeDTO' _ -> True
     SetPhaseEventChangeDTO' _ -> True
     SetLabelsEventChangeDTO' _ -> True
+    DeleteItemEventChangeDTO' _ -> True
     _ -> False
 
 eventChangeUuid :: ProjectEventChangeDTO -> U.UUID
@@ -122,6 +123,7 @@ eventChangeUuid reqDto =
     ClearReplyEventChangeDTO' event -> event.uuid
     SetPhaseEventChangeDTO' event -> event.uuid
     SetLabelsEventChangeDTO' event -> event.uuid
+    DeleteItemEventChangeDTO' event -> event.uuid
     ResolveCommentThreadEventChangeDTO' event -> event.uuid
     ReopenCommentThreadEventChangeDTO' event -> event.uuid
     AssignCommentThreadEventChangeDTO' event -> event.uuid

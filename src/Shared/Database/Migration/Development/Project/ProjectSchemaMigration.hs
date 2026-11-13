@@ -101,7 +101,7 @@ createProjectEventTable :: WizardRequestContextC s m => m Int64
 createProjectEventTable = do
   logInfo _CMP_MIGRATION "(Table/ProjectEvent) create table"
   let sql =
-        "CREATE TYPE project_event_type AS ENUM ('ClearReplyEvent', 'SetReplyEvent', 'SetLabelsEvent', 'SetPhaseEvent'); \
+        "CREATE TYPE project_event_type AS ENUM ('ClearReplyEvent', 'SetReplyEvent', 'SetLabelsEvent', 'SetPhaseEvent', 'DeleteItemEvent'); \
         \CREATE TYPE value_type AS ENUM ('IntegrationReply', 'AnswerReply', 'MultiChoiceReply', 'ItemListReply', 'StringReply', 'ItemSelectReply', 'FileReply'); \
         \CREATE TABLE IF NOT EXISTS project_event \
         \( \
