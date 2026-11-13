@@ -31,5 +31,6 @@ data ProjectDetailQuestionnaireDTO = ProjectDetailQuestionnaireDTO
   , unresolvedCommentCounts :: M.Map String (M.Map U.UUID Int)
   , resolvedCommentCounts :: M.Map String (M.Map U.UUID Int)
   , fileCount :: Int
+  , workspaceUuid :: U.UUID
   }
   deriving (Show, Eq, Generic)

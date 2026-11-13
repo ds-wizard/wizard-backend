@@ -56,4 +56,5 @@ instance ToSchema ProjectDetailQuestionnaireDTO where
                 )
               ]
         , fileCount = 0
+        , workspaceUuid = project1.workspaceUuid
         }

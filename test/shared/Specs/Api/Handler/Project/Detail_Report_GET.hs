@@ -97,6 +97,7 @@ create_test_200 title requestContext project authHeader =
       assertResStatus status expStatus
       assertResHeaders headers expHeaders
       compareReportDtos resBody expDto
+      liftIO $ resBody.workspaceUuid `shouldBe` project.workspaceUuid
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------

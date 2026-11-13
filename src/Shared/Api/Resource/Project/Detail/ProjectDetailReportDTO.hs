@@ -24,5 +24,6 @@ data ProjectDetailReportDTO = ProjectDetailReportDTO
   , chapterReports :: [ChapterReport]
   , chapters :: [Chapter]
   , metrics :: [Metric]
+  , workspaceUuid :: U.UUID
   }
   deriving (Show, Eq, Generic)

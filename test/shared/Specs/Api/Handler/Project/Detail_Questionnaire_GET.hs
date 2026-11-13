@@ -200,6 +200,7 @@ create_test_200 title requestContext project projectEvents projectContent kmPack
               , unresolvedCommentCounts = unresolvedCommentCounts
               , resolvedCommentCounts = M.empty
               , fileCount = 0
+              , workspaceUuid = project.workspaceUuid
               }
       let expBody = encode expDto
       -- WHEN: Call API

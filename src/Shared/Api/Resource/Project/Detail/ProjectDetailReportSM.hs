@@ -34,4 +34,5 @@ instance ToSchema ProjectDetailReportDTO where
         , chapterReports = report1.chapterReports
         , chapters = report1.chapters
         , metrics = report1.metrics
+        , workspaceUuid = project1.workspaceUuid
         }

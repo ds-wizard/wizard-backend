@@ -25,6 +25,7 @@ toDTO project report locale =
     , chapters = report.chapters
     , chapterReports = report.chapterReports
     , metrics = report.metrics
+    , workspaceUuid = project.workspaceUuid
     }
 
 toMcpReportDTO :: ProjectDetailReportDTO -> McpProjectReportDTO
