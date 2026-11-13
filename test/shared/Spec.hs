@@ -103,6 +103,7 @@ import Specs.Service.KnowledgeModel.Compiler.Modifier.ModifierSpec
 import Specs.Service.KnowledgeModel.Editor.Event.EditorEventServiceSpec
 import Specs.Service.KnowledgeModel.Editor.KnowledgeModelEditorServiceSpec
 import Specs.Service.KnowledgeModel.KnowledgeModelFilterSpec
+import Specs.Service.KnowledgeModel.KnowledgeModelServiceSpec
 import Specs.Service.KnowledgeModel.Locale.Pot.PotFileServiceSpec
 import Specs.Service.KnowledgeModel.Metamodel.Migrator.EventMigratorSpec
 import Specs.Service.KnowledgeModel.Migration.Migrator.MigrationSpec
@@ -350,6 +351,7 @@ main =
                   knowledgeModelEditorServiceSpec requestContext
                   editorEventServiceSpec requestContext
                 describe "Package" $ packageValidationSpec requestContext
+                knowledgeModelServiceSpec requestContext
               auditLogServiceSpec requestContext
               localeServiceIntegrationSpec requestContext
               mailerIntegrationSpec requestContext
