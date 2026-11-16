@@ -26,6 +26,7 @@ import Shared.Model.KnowledgeModel.Event.KnowledgeModelEvent
 import Shared.Model.KnowledgeModel.KnowledgeModel
 import Shared.Model.KnowledgeModel.KnowledgeModelUtil
 import Shared.Model.KnowledgeModel.Tree.KnowledgeModelEntityNodeQuery
+import Shared.Service.KnowledgeModel.Compiler.Compiler
 import Shared.Service.KnowledgeModel.Editor.Collaboration.CollaborationService
 import Shared.Service.KnowledgeModel.Editor.EditorAcl
 import Shared.Service.KnowledgeModel.Editor.EditorAuditLog
@@ -64,7 +65,7 @@ storeEditorEvents editorUuid reqDto = do
   let names = createEventNames (maybe editorUuid (.uuid) (lastSafe baseEvents)) reqDto.events
   baseKm <- compileEditorKnowledgeModel editor baseEvents
   events <- createEvents baseEvents =<< resolveAtRevision baseKm names reqDto addedEvents
-  km <- compileEditorKnowledgeModel editor (baseEvents ++ events)
+  km <- liftEither (compile (Just baseKm) events)
   newEvents <- if null addedEvents && reqDto.dryRun /= Just True then insertEditorEvents editor events else return []
   let revision = fmap (.uuid) . lastSafe $ storedEvents ++ newEvents
   return (toEventsDTO revision names . toEntityNodes km outlineQuery . fmap (affectedEntityUuid km) $ events, newEvents)
@@ -82,7 +83,7 @@ compileEditorWithPendingEvents editorUuid reqDtos = do
   let names = createEventNames (maybe editorUuid (.uuid) (lastSafe storedEvents)) reqDtos
   baseKm <- compileEditorKnowledgeModel editor storedEvents
   events <- resolveEditorEvents baseKm names reqDtos
-  km <- compileEditorKnowledgeModel editor (storedEvents ++ events)
+  km <- liftEither (compile (Just baseKm) events)
   return (editor, baseKm, km, names)
 
 splitAtRevision :: Maybe U.UUID -> [KnowledgeModelEvent] -> ([KnowledgeModelEvent], [KnowledgeModelEvent])

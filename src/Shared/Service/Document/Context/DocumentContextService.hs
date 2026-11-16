@@ -92,7 +92,7 @@ createKnowledgeModelEditorDocumentContext :: WizardRequestContextC s m => Knowle
 createKnowledgeModelEditorDocumentContext editor = do
   kmEvents <- fmap EditorMapper.toKnowledgeModelEvent <$> findKnowledgeModelEventsByEditorUuid editor.uuid
   replies <- EditorMapper.toReplies <$> findKnowledgeModelRepliesByEditorUuid editor.uuid
-  km <- compileKnowledgeModelWithCaching' kmEvents editor.previousPackageUuid [] False
+  km <- compileKnowledgeModel kmEvents editor.previousPackageUuid []
   mPreviousPkg <- maybe (return Nothing) findPackageByUuid' editor.previousPackageUuid
   workspace <- findWorkspaceByUuid editor.workspaceUuid
   mCreatedBy <- maybe (return Nothing) findUserByUuid' editor.createdBy

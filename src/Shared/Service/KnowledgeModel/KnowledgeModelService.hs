@@ -31,6 +31,9 @@ compileKnowledgeModel events mPkgUuid tagUuids = compileKnowledgeModelWithCachin
 
 compileKnowledgeModelWithCaching' :: WizardRequestContextC s m => [KnowledgeModelEvent] -> Maybe U.UUID -> [U.UUID] -> Bool -> m KnowledgeModel
 compileKnowledgeModelWithCaching' [] (Just pkgUuid) tagUuids True = findOrCompileKnowledgeModel pkgUuid tagUuids
+compileKnowledgeModelWithCaching' events (Just pkgUuid) tagUuids True = do
+  km <- findOrCompileKnowledgeModel pkgUuid []
+  filterKnowledgeModel tagUuids <$> liftEither (compile (Just km) events)
 compileKnowledgeModelWithCaching' events mPkgUuid tagUuids _ = do
   allEvents <- getEvents mPkgUuid
   km <- liftEither $ compile Nothing allEvents

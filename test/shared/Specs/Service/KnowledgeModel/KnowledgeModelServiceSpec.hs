@@ -7,6 +7,8 @@ import Shared.Constant.Tenant
 import Shared.Util.Date
 
 import Shared.Database.DAO.KnowledgeModel.KnowledgeModelCacheDAO
+import Shared.Database.Migration.Development.KnowledgeModel.Data.Chapters
+import Shared.Database.Migration.Development.KnowledgeModel.Data.Event.KnowledgeModelEvents
 import Shared.Database.Migration.Development.KnowledgeModel.Data.Package.KnowledgeModelPackages
 import Shared.Database.Migration.Development.KnowledgeModel.Data.Tags
 import qualified Shared.Database.Migration.Development.KnowledgeModel.KnowledgeModelPackageMigration as KM_PKG_Migration
@@ -55,3 +57,26 @@ knowledgeModelServiceSpec requestContext =
         (Right km) <- runInContext (compileKnowledgeModel [] (Just netherlandsKmPackageV2.uuid) []) requestContext
         -- THEN:
         km.annotations `shouldBe` [MapEntry "cached" "true"]
+
+    it "compileKnowledgeModel with events compiles the same knowledge model as the whole series of packages" $
+      -- GIVEN:
+      do
+        runInContextIO KM_PKG_Migration.runMigration requestContext
+        (Right expectedKm) <- runInContext (compileKnowledgeModelWithCaching' [] (Just netherlandsKmPackageV2.uuid) [tagDataScience.uuid] False) requestContext
+        -- WHEN:
+        (Right km) <- runInContext (compileKnowledgeModel [a_km1_ch4] (Just netherlandsKmPackage.uuid) [tagDataScience.uuid]) requestContext
+        -- THEN:
+        km `shouldBe` expectedKm
+
+    it "compileKnowledgeModel with events builds on the cached knowledge model of the package" $
+      -- GIVEN:
+      do
+        runInContextIO KM_PKG_Migration.runMigration requestContext
+        (Right netherlandsKm) <- runInContext (compileKnowledgeModelWithCaching' [] (Just netherlandsKmPackage.uuid) [] False) requestContext
+        let cachedKm = netherlandsKm {annotations = [MapEntry "cached" "true"]} :: KnowledgeModel
+        runInContextIO (insertKnowledgeModelCache (KnowledgeModelCache netherlandsKmPackage.uuid [] cachedKm defaultTenantUuid (dt' 2018 1 21))) requestContext
+        -- WHEN:
+        (Right km) <- runInContext (compileKnowledgeModel [a_km1_ch4] (Just netherlandsKmPackage.uuid) []) requestContext
+        -- THEN:
+        km.annotations `shouldBe` [MapEntry "cached" "true"]
+        km.chapterUuids `shouldBe` netherlandsKm.chapterUuids ++ [chapter4WithoutQuestions.uuid]

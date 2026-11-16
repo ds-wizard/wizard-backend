@@ -44,7 +44,7 @@ A single workflow (`.github/workflows/pipeline.yml`) runs on every push:
    image is pushed a second, native `arm64` build produces `dist-arm64`
 3. **Test** — the five test suites in parallel, each against its own PostgreSQL + MinIO
 4. **Image** (`main` and tags only) — a single multi-platform (`linux/amd64` + `linux/arm64`) Docker build
-   pushed to `fairwizard/backend`
+   pushed to `ghcr.io/codevence/backend`
    (`main` + `sha-*` from `main`, semver tags from releases; `latest` and the major tag move only for the
    highest version)
 5. **API docs** (tags only) — starts the built backend, extracts the Swagger specs of all four APIs and pushes
