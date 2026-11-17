@@ -187,6 +187,7 @@ _test-dependencies: &test-dependencies
     - wreq
     - yaml
     - zip-archive
+    - zxcvbn-hs
     - hspec
     - hspec-expectations-json
     - hspec-expectations-pretty-diff

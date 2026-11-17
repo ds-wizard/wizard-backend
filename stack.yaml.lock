@@ -60,6 +60,17 @@ packages:
   original:
     url: https://github.com/haskellify/minio-hs/archive/e96186514e5f4ceade5e0867285f2e20cca1e973.tar.gz
 - completed:
+    name: zxcvbn-hs
+    pantry-tree:
+      sha256: 67980bf60a5a2788435911bbc2d7ce002d2c543bcd5df2da68832144100fa39f
+      size: 4435
+    sha256: e3d09f145ef5b5039a7c051656b3092950ad0302772b2f432213afc5ea16e955
+    size: 2106212
+    url: https://github.com/haskellify/zxcvbn-hs/archive/911e406b59f0ee660d66e41377d220e2618801aa.tar.gz
+    version: 0.3.8
+  original:
+    url: https://github.com/haskellify/zxcvbn-hs/archive/911e406b59f0ee660d66e41377d220e2618801aa.tar.gz
+- completed:
     name: connection
     pantry-tree:
       sha256: 0b2c8a67df69307dcb32d33b4f7a33a90e81b3d6c3164ba8e9b2b855255ea0a1
@@ -272,13 +283,6 @@ packages:
       size: 631
   original:
     hackage: x509-validation-1.6.12@sha256:4f4af20ec77f02c042ecd4726c195bb0e0b694b336de81e7bd4515b2917bd9bc,2169
-- completed:
-    hackage: zxcvbn-hs-0.3.8@sha256:bca8eb3b5c122a46c3771b47d9e039d42c5d0c4afb04c333fc618aeae27466bd,4890
-    pantry-tree:
-      sha256: 1791461726e59a7582f8fb1b1498f7b94be263ad70b3fa22078fd48b4de868a3
-      size: 2727
-  original:
-    hackage: zxcvbn-hs-0.3.8@sha256:bca8eb3b5c122a46c3771b47d9e039d42c5d0c4afb04c333fc618aeae27466bd,4890
 snapshots:
 - completed:
     sha256: 655e468f774beee1badf07dc4c45fb50288d5c66ce7bef6f487b7f92891a90b0
