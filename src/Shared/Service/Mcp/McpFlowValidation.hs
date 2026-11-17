@@ -3,6 +3,7 @@ module Shared.Service.Mcp.McpFlowValidation where
 import Control.Monad (when)
 import Control.Monad.Except (throwError)
 import Crypto.Hash (Digest, SHA256, hash)
+import qualified Data.ByteArray as BA
 import Data.ByteArray.Encoding (Base (..), convertToBase)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS
@@ -107,7 +108,7 @@ resolveClientCredentials mAuthHeader reqDto =
 validateClientSecret :: McpClient -> Maybe String -> Either McpOAuthError ()
 validateClientSecret client mClientSecret
   | client.tokenEndpointAuthMethod == "none" = Right ()
-  | mClientSecret == Just client.clientSecret = Right ()
+  | maybe False (BA.constEq (TE.encodeUtf8 . T.pack $ client.clientSecret) . TE.encodeUtf8 . T.pack) mClientSecret = Right ()
   | otherwise = Left $ invalidClient "Invalid client credentials"
 
 validateAuthorizationCode :: McpAuthorizationCode -> McpClient -> Maybe String -> UTCTime -> Either McpOAuthError ()

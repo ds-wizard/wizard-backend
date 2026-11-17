@@ -21,6 +21,7 @@ instance ToJSON AppError where
   toJSON (ConflictError error payload) = object ["status" .= 409, "error" .= error, "data" .= payload]
   toJSON LockedError = object ["status" .= 423]
   toJSON (GeneralServerError _) = object ["status" .= 500]
+  toJSON (ServiceUnavailableError message) = object ["status" .= 503, "message" .= message]
   toJSON (HttpClientError status _) = object ["statusCode" .= statusCode status, "source" .= "external"]
 
 instance FromJSON AppError where
@@ -55,5 +56,6 @@ instance FromJSON AppError where
       (409, _, _) -> ConflictError <$> o .: "error" <*> o .: "data"
       (423, _, _) -> return LockedError
       (500, _, _) -> return $ GeneralServerError ""
+      (503, _, _) -> ServiceUnavailableError <$> o .: "message"
       (_, _, _) -> return $ GeneralServerError ""
   parseJSON _ = mzero

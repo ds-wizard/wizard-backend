@@ -5,11 +5,12 @@ import Data.Aeson (encode)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Network.HTTP.Types.Status
-import Servant (ServerError (..), err302, err400, err401, err403, err404, err409, err500, errBody, errHeaders)
+import Servant (ServerError (..), err302, err400, err401, err403, err404, err409, err500, err503, errBody, errHeaders)
 import Prelude hiding (log)
 
 import Shared.Api.Resource.Error.ErrorJM ()
 import Shared.Constant.Api (contentTypeHeaderJSON)
+import Shared.Localization.Locale (toLocaleMessage)
 import Shared.Model.Error.Error
 import Shared.Util.Logger
 
@@ -60,6 +61,9 @@ sendError LockedError =
 sendError (GeneralServerError message) = do
   logError _CMP_API message
   return $ err500 {errBody = encode $ GeneralServerError message, errHeaders = [contentTypeHeaderJSON]}
+sendError (ServiceUnavailableError message) = do
+  logWarn _CMP_API (toLocaleMessage message)
+  return $ err503 {errBody = encode $ ServiceUnavailableError message, errHeaders = [contentTypeHeaderJSON]}
 sendError (HttpClientError status message) = do
   logError _CMP_API message
   return $

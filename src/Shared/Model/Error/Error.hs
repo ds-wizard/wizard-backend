@@ -19,5 +19,6 @@ data AppError
   | ConflictError LocaleRecord Value
   | LockedError
   | GeneralServerError String
+  | ServiceUnavailableError LocaleRecord
   | HttpClientError Status String
   deriving (Show, Eq)
