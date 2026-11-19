@@ -16,6 +16,8 @@ import Shared.Database.DAO.Submission.SubmissionDAO
 import Shared.Database.DAO.WizardCommon
 import Shared.Integration.Http.Submission.Runner
 import Shared.Localization.Messages.Public
+import Shared.Model.Automation.AutomationEvent
+import Shared.Model.Automation.AutomationHook
 import Shared.Model.Context.RequestContextHelpers
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Document.Document
@@ -27,6 +29,7 @@ import Shared.Model.Submission.Submission
 import Shared.Model.Submission.SubmissionList
 import Shared.Model.User.UserSubmissionPropList
 import Shared.S3.Document.DocumentS3
+import Shared.Service.Automation.AutomationHookService
 import Shared.Service.Common
 import Shared.Service.Document.DocumentAcl
 import Shared.Service.Document.DocumentAuditLog
@@ -59,6 +62,7 @@ submitDocument docUuid reqDto =
     checkEditPermissionToSubmission doc
     services <- findServicesForDocument doc
     service <- maybe (throwError . NotExistsError $ _ERROR_VALIDATION__ABSENCE "submission service") return (L.find (\s -> s.sId == reqDto.serviceId) services)
+    _ <- checkAutomationHook (DocumentSubmitHook doc service.sId)
     docContent <- retrieveDocumentContent docUuid
     userProps <- getUserProps service
     sub <- createSubmission docUuid reqDto
@@ -69,6 +73,10 @@ submitDocument docUuid reqDto =
             Left error -> sub {state = ErrorSubmissionState, returnedData = Just error} :: Submission
     savedSubmission <- updateSubmissionByUuid updatedSub
     al_submitDocument doc service savedSubmission
+    emitEvent $
+      case response of
+        Right _ -> DocumentSubmittedEvent doc savedSubmission
+        Left error -> DocumentSubmissionFailedEvent doc savedSubmission (Just error)
     currentUser <- getCurrentUser
     return $ toList savedSubmission service (Just $ toSuggestion' currentUser)
   where

@@ -73,7 +73,7 @@ writeAuditLog definition entity mChanges eventData =
     let actionData = toActionData snapshot mChanges eventData
     auditLog <- createAuditLog definition actionData mWorkspace
     insertAuditLog auditLog
-    publishToEventBridge definition auditLog
+    publishToEventBridge auditLog
 
 workspaceOf :: AuditLogEventDefinition c d -> AuditLogEntity -> Maybe U.UUID
 workspaceOf definition entity =
@@ -93,10 +93,10 @@ createAuditLog definition actionData mWorkspace = do
   now <- liftIO getCurrentTime
   return $ toAuditLog uuid (definitionComponent definition) (definitionAction definition) actionData mWorkspace mCreatedBy source tenantUuid now
 
-publishToEventBridge :: WizardRequestContextC s m => AuditLogEventDefinition c d -> AuditLog -> m ()
-publishToEventBridge definition auditLog = do
+publishToEventBridge :: WizardRequestContextC s m => AuditLog -> m ()
+publishToEventBridge auditLog = do
   context <- ask
-  when (context.serverConfig'.auditLog.eventBridgePublishingEnabled && definitionEventBridge definition) $ do
+  when context.serverConfig'.auditLog.eventBridgePublishingEnabled $ do
     uuid <- liftIO generateUuid
     let action = f' "%s::%s" [auditLog.component, auditLog.action]
     let body = encodeJsonToString AwsEventBridgePutEvents {action = action, actionData = toEventBridgeData auditLog}

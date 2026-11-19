@@ -23,6 +23,7 @@ import Shared.Database.DAO.Workspace.WorkspaceMembershipDAO
 import Shared.Localization.Messages.Public
 import Shared.Localization.Messages.Workspace.Public
 import Shared.Model.AuditLog.Data.WorkspaceAuditLogData
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Common.Page
 import Shared.Model.Common.Pageable
 import Shared.Model.Common.Sort
@@ -78,8 +79,9 @@ createWorkspaceWithUuid uuid reqDto =
     currentUser <- getCurrentUser
     now <- liftIO getCurrentTimeInMicroseconds
     (workspace, adminRole) <- createWorkspaceWithRoles (fromChangeDTO reqDto uuid tenantUuid now)
-    addWorkspaceMembership workspace currentUser.uuid (Just adminRole.uuid) now
+    void $ addWorkspaceMembership workspace currentUser.uuid (Just adminRole.uuid) now
     al_createWorkspace workspace
+    emitEvent (WorkspaceCreatedEvent workspace)
     return workspace
 
 createDefaultWorkspace :: WizardRequestContextC s m => U.UUID -> String -> UTCTime -> m Workspace
@@ -116,6 +118,7 @@ deleteWorkspace uuid =
     projectUuids <- findProjectUuidsByWorkspaceUuid uuid
     editorUuids <- findKnowledgeModelEditorUuidsByWorkspaceUuid uuid
     whenAuditLogEnabled $ al_deleteWorkspace workspace =<< countWorkspaceDeletion uuid projectUuids editorUuids
+    emitEvent (WorkspaceDeletedEvent workspace)
     void $ deleteWorkspaceByUuid uuid
     traverse_ (removeWorkspaceLogo uuid) workspace.logoUrl
     traverse_ logOutOnlineUsersWhenProjectDramaticallyChanged projectUuids
@@ -169,13 +172,14 @@ createWorkspaceWithRoles workspace = do
   insertWorkspace workspace
   adminRoleUuid <- liftIO generateUuid
   userRoleUuid <- liftIO generateUuid
-  let adminRole = toWorkspaceRole adminRoleUuid "Admin" workspaceRolePermissions workspace
+  adminPermissions <- asks (.workspaceRolePermissions')
+  let adminRole = toWorkspaceRole adminRoleUuid "Admin" adminPermissions workspace
   let userRole = toWorkspaceRole userRoleUuid "User" [] workspace
   insertRole adminRole
   insertRole userRole
   let workspaceWithDefault = workspace {defaultRoleUuid = Just userRole.uuid}
   updateWorkspaceByUuid workspaceWithDefault
-  addWorkspaceMembership workspaceWithDefault systemUserUuid Nothing workspace.createdAt
+  void $ addWorkspaceMembership workspaceWithDefault systemUserUuid Nothing workspace.createdAt
   return (workspaceWithDefault, adminRole)
 
 validateChangeDto :: WizardRequestContextC s m => WorkspaceChangeDTO -> m ()

@@ -71,6 +71,10 @@ _ERROR_VALIDATION__MISSING_PERMISSION permission = _ERROR_VALIDATION__FORBIDDEN 
 _ERROR_SERVICE_COMMON__FEATURE_IS_DISABLED featureName =
   LocaleRecord "error.service.common.feature_is_disabled" "Feature '%s' is disabled" [featureName]
 
+-- Automation
+_ERROR_SERVICE_AUTOMATION__HOOK_DENIED reason =
+  LocaleRecord "error.service.automation.hook_denied" "An automation of the organization refused the action: %s" [reason]
+
 -- User Email Link
 _ERROR_SERVICE_USER_EMAIL_LINK__EXPIRED = LocaleRecord "error.service.user_email_link.expired" "Link is expired" []
 

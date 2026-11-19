@@ -21,6 +21,7 @@ import Shared.Database.DAO.Project.ProjectVersionDAO
 import Shared.Database.DAO.WizardCommon
 import Shared.Localization.Messages.Public
 import Shared.Localization.Messages.WizardPublic
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Common.Lens
 import Shared.Model.Context.RequestContextHelpers
 import Shared.Model.Context.WizardRequestContext
@@ -67,6 +68,7 @@ createVersionWithUuid projectUuid reqDto uuid =
     let version = fromVersionChangeDTO reqDto uuid projectUuid tenantUuid currentUser.uuid now
     insertProjectVersion version
     al_createProjectVersion project version
+    emitEvent (ProjectVersionCreatedEvent project version)
     return $ toVersionList version (Just currentUser)
 
 cloneProjectVersions :: WizardRequestContextC s m => U.UUID -> U.UUID -> [(U.UUID, ProjectEventList)] -> m [(ProjectVersion, ProjectVersion)]

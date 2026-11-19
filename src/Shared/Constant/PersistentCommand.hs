@@ -6,6 +6,9 @@ analyticsComponent = "analytics"
 automationComponent :: String
 automationComponent = "automation"
 
+automationRunComponent :: String
+automationRunComponent = "automation_run"
+
 awsEventBridgeComponent :: String
 awsEventBridgeComponent = "aws_event_bridge"
 
@@ -20,3 +23,6 @@ metamodelMigratorComponent = "metamodel_migrator"
 
 projectCacheComponent :: String
 projectCacheComponent = "project_cache"
+
+sentryIgnoredComponents :: [String]
+sentryIgnoredComponents = [automationRunComponent]

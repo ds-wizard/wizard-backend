@@ -10,6 +10,7 @@ import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.Notification
 import Database.PostgreSQL.Simple.ToField
+import Database.PostgreSQL.Simple.ToRow
 import GHC.Int
 
 import Shared.Database.DAO.Common
@@ -92,12 +93,27 @@ findPersistentCommandSimpleByUuid :: (RequestContextC s sc m, FromField identity
 findPersistentCommandSimpleByUuid uuid = createFindEntityWithFieldsByFn "uuid, component, tenant_uuid, created_by" False entityName [("uuid", U.toString uuid)]
 
 insertPersistentCommand :: (RequestContextC s sc m, ToField identity) => PersistentCommand identity -> m Int64
-insertPersistentCommand command = do
-  createInsertFn entityName command
+insertPersistentCommand command = insertPersistentCommandWithQueueKey command Nothing
+
+insertPersistentCommandWithQueueKey :: (RequestContextC s sc m, ToField identity) => PersistentCommand identity -> Maybe String -> m Int64
+insertPersistentCommandWithQueueKey command mQueueKey = do
+  maybe (createInsertFn entityName command) (insertQueuedPersistentCommand command) mQueueKey
   context <- ask
   case L.find (\lf -> lf.component == command.component) context.serverConfig'.persistentCommand'.lambdaFunctions of
     Just lf -> invokeLambdaFunction lf
     Nothing -> notifyPersistentCommandQueues command
+
+insertQueuedPersistentCommand :: (RequestContextC s sc m, ToField identity) => PersistentCommand identity -> String -> m Int64
+insertQueuedPersistentCommand command queueKey = do
+  let sql =
+        fromString $
+          f'
+            "INSERT INTO %s (uuid, state, component, function, body, last_error_message, attempts, max_attempts, tenant_uuid, created_by, created_at, updated_at, last_trace_uuid, queue_key) \
+            \VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            [entityName]
+  let params = toRow command ++ [toField queueKey]
+  logInsertAndUpdate sql params
+  runDB (\conn -> execute conn sql params)
 
 updatePersistentCommandByUuid :: (RequestContextC s sc m, ToField identity) => PersistentCommand identity -> m Int64
 updatePersistentCommandByUuid command = do

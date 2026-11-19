@@ -14,6 +14,7 @@ import qualified Data.UUID as U
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.ToField
 
+import Shared.Constant.PersistentCommand (sentryIgnoredComponents)
 import Shared.Database.DAO.Common (runInTransaction)
 import Shared.Database.DAO.PersistentCommand.PersistentCommandDAO
 import Shared.Model.Config.ServerConfig
@@ -92,7 +93,7 @@ executePersistentCommandByUuid runRequestContextWithRequestContext' execute forc
                       , attempts = command.attempts + 1
                       , updatedAt = now
                       }
-              when (resultState == ErrorPersistentCommandState) (sendToSentry updatedCommand)
+              when (resultState == ErrorPersistentCommandState && command.component `notElem` sentryIgnoredComponents) (sendToSentry updatedCommand)
               updatePersistentCommandByUuid updatedCommand
               logInfoI _CMP_SERVICE (f' "Command finished with following state: '%s'" [show resultState])
           )

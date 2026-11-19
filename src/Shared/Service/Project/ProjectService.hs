@@ -33,6 +33,7 @@ import Shared.Database.DAO.Project.ProjectEventDAO
 import Shared.Database.DAO.User.UserDAO
 import Shared.Database.DAO.WizardCommon
 import Shared.Localization.Messages.WizardInternal
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Common.Lens
 import Shared.Model.Common.Page
 import Shared.Model.Common.Pageable
@@ -59,6 +60,8 @@ import Shared.Model.Project.Project
 import Shared.Model.Project.ProjectContent
 import Shared.Model.Project.ProjectReply
 import Shared.Model.Settings.Settings
+import Shared.Service.Automation.AutomationEventService
+import Shared.Service.Automation.AutomationHookService
 import qualified Shared.Service.DocumentTemplate.DocumentTemplateMapper as STM
 import qualified Shared.Service.KnowledgeModel.Locale.KnowledgeModelLocaleMapper as KnowledgeModelLocaleMapper
 import Shared.Service.KnowledgeModel.Locale.KnowledgeModelLocaleService (findLocaleJson)
@@ -133,6 +136,7 @@ createProjectWithGivenUuid reqDto projectUuid =
     permissions <- ownerPermissionsIfMember workspaceUuid projectUuid
     project <- insertNewProject reqDto projectUuid workspaceUuid pkg permissions
     al_createProject project pkg Nothing
+    emitEvent (ProjectCreatedEvent project NewProjectSource)
     toCreatedProjectDTO project pkg
 
 insertNewProject :: WizardRequestContextC s m => ProjectCreateDTO -> U.UUID -> U.UUID -> KnowledgeModelPackage -> [ProjectPerm] -> m Project
@@ -158,9 +162,10 @@ insertNewProject reqDto projectUuid workspaceUuid pkg permissions = do
           tenantUuid
           workspaceUuid
           now
-  insertProject project
+  hookedProject <- checkProjectCreateHook project
+  insertProject hookedProject
   insertProjectEvents projectEvents
-  return project
+  return hookedProject
 
 toCreatedProjectDTO :: WizardRequestContextC s m => Project -> KnowledgeModelPackage -> m ProjectDTO
 toCreatedProjectDTO project pkg = do
@@ -188,8 +193,9 @@ createProjectFromTemplateWithUuid reqDto newProjectUuid =
     let newVisibility = tcProject.projectVisibility.defaultValue
     let newSharing = tcProject.projectSharing.defaultValue
     newPermissions <- ownerPermissionsIfMember originProject.workspaceUuid newProjectUuid
-    let newProject =
-          originProject
+    newProject <-
+      checkProjectCreateHook
+        ( originProject
             { uuid = newProjectUuid
             , name = reqDto.name
             , description = Nothing
@@ -202,6 +208,7 @@ createProjectFromTemplateWithUuid reqDto newProjectUuid =
             , updatedAt = now
             }
             :: Project
+        )
     insertProject newProject
     clonedFiles <- cloneProjectFiles originProject.uuid newProject.uuid
     newProjectEventsWithOldEventUuid <- cloneProjectEventsWithOldEventUuid originProjectEvents
@@ -211,6 +218,7 @@ createProjectFromTemplateWithUuid reqDto newProjectUuid =
     duplicateCommentThreads reqDto.projectUuid newProjectUuid
     cloneProjectVersions originProject.uuid newProject.uuid newProjectEventsWithOldEventUuid
     al_createProject newProject pkg (Just originProject)
+    emitEvent (ProjectCreatedEvent newProject TemplateProjectSource)
     toCreatedProjectDTO newProject pkg
 
 cloneProject :: WizardRequestContextC s m => U.UUID -> m ProjectDTO
@@ -230,14 +238,16 @@ cloneProjectWithUuid cloneUuid newProjectUuid =
     ownerPerms <- ownerPermissionsIfMember originProject.workspaceUuid newProjectUuid
     let newPermissions = ownerPerms ++ removeUserPermission currentUser.uuid originProject.permissions
     let newDuplicatedPermissions = fmap (\permission -> permission {projectUuid = newProjectUuid} :: ProjectPerm) newPermissions
-    let newProject =
-          originProject
+    newProject <-
+      checkProjectCreateHook
+        ( originProject
             { uuid = newProjectUuid
             , name = "Copy of " ++ originProject.name
             , permissions = newDuplicatedPermissions
             , updatedAt = now
             }
             :: Project
+        )
     insertProject newProject
     clonedFiles <- cloneProjectFiles originProject.uuid newProject.uuid
     newProjectEventsWithOldEventUuid <- cloneProjectEventsWithOldEventUuid originProjectEvents
@@ -247,6 +257,7 @@ cloneProjectWithUuid cloneUuid newProjectUuid =
     cloneProjectVersions originProject.uuid newProject.uuid newProjectEventsWithOldEventUuid
     duplicateCommentThreads cloneUuid newProjectUuid
     al_cloneProject originProject newProject
+    emitEvent (ProjectCreatedEvent newProject CloneProjectSource)
     toCreatedProjectDTO newProject pkg
 
 getProjectByUuid :: WizardRequestContextC s m => U.UUID -> m Project
@@ -355,6 +366,8 @@ modifyProjectShare projectUuid reqDto =
     updateProjectByUuid updatedProject
     al_updateProject project updatedProject
     al_updateProjectPermissions project updatedProject
+    emitProjectUpdated project updatedProject
+    emitProjectPermissionsChanged project updatedProject
     updatePermsForOnlineUsers projectUuid
     skipIfAssigningProject
       project
@@ -382,6 +395,7 @@ modifyProjectSettings projectUuid reqDto =
     let updatedProject = fromSettingsChangeDTO project reqDto hasPermission now
     updateProjectByUuid updatedProject
     al_updateProject project updatedProject
+    emitProjectUpdated project updatedProject
     deleteTemporalDocumentsByProjectUuid project.uuid
     setProjectForOnlineUsers updatedProject
     return reqDto
@@ -396,6 +410,7 @@ modifyProjectName projectUuid reqDto =
     let updatedProject = project {name = reqDto.name, updatedAt = now} :: Project
     updateProjectByUuid updatedProject
     al_updateProject project updatedProject
+    emitProjectUpdated project updatedProject
     deleteTemporalDocumentsByProjectUuid project.uuid
     setProjectForOnlineUsers updatedProject
     return reqDto
@@ -431,6 +446,7 @@ deleteProject projectUuid shouldValidatePermission =
     project <- findProjectByUuid projectUuid
     when shouldValidatePermission (checkOwnerPermissionToProject project.workspaceUuid project.visibility project.permissions)
     al_deleteProject project
+    emitEvent (ProjectDeletedEvent project)
     deleteProjectByUuid projectUuid
     void $ logOutOnlineUsersWhenProjectDramaticallyChanged projectUuid
 

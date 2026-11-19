@@ -21,6 +21,7 @@ import Shared.Database.DAO.Tenant.TenantLimitBundleDAO
 import Shared.Localization.Messages.Public
 import Shared.Localization.Messages.User.Public
 import Shared.Model.AuditLog.AuditLogSource
+import Shared.Model.Automation.AutomationHook
 import Shared.Model.Cache.ServerCache
 import Shared.Model.Config.BuildInfoConfig
 import Shared.Model.Config.ServerConfig
@@ -31,6 +32,7 @@ import Shared.Model.Context.Scope
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Error.Error
 import Shared.Model.Sentry.SentryEvent
+import qualified Shared.Model.User.RolePermission as RolePermission
 import Shared.Model.User.RoleSimple
 import Shared.Model.Websocket.WebsocketRegistry
 import Shared.Service.Acl.AclService
@@ -151,6 +153,9 @@ instance HasField "nodeUuid'" RequestContext U.UUID where
 instance HasField "progressReporter'" RequestContext ProgressReporter where
   getField = (.progressReporter)
 
+instance HasField "workspaceRolePermissions'" RequestContext [String] where
+  getField _ = RolePermission.workspaceRolePermissions
+
 instance WizardRequestContextC RequestContext RequestContextM where
   runRequestContextWithRequestContext function requestContext = do
     let loggingLevel = requestContext.serverConfig.logging.level
@@ -162,6 +167,8 @@ instance WizardRequestContextC RequestContext RequestContextM where
           logError _CMP_SERVER ("Caught error: " ++ show error)
           return . Left $ show error
   findTenantLimits tenantUuid = toLimits <$> findLimitBundleByUuid tenantUuid
+  emitEvent _ = return ()
+  runAutomationHook _ = return allowAutomationHook
 
 instance AclContext RequestContextM where
   checkPermission perm = do

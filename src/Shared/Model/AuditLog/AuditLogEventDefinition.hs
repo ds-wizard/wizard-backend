@@ -5,7 +5,6 @@ module Shared.Model.AuditLog.AuditLogEventDefinition (
   definitionAction,
   definitionDescription,
   definitionScope,
-  definitionEventBridge,
   definitionEntityType,
   definitionEntityDescription,
   definitionExample,
@@ -34,9 +33,6 @@ definitionDescription definition = definition.description
 
 definitionScope :: AuditLogEventDefinition c d -> AuditLogScope
 definitionScope definition = definition.scope
-
-definitionEventBridge :: AuditLogEventDefinition c d -> Bool
-definitionEventBridge definition = definition.eventBridge
 
 definitionEntityType :: AuditLogEventDefinition c d -> AuditLogEntityType
 definitionEntityType definition = definition.entityType

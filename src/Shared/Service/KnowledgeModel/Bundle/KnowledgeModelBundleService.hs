@@ -30,6 +30,7 @@ import Shared.Localization.Messages.Internal
 import Shared.Localization.Messages.KnowledgeModel.Public
 import Shared.Localization.Messages.Public
 import Shared.Localization.Messages.WizardPublic
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Context.AclContext
 import Shared.Model.Context.RequestContextHelpers
 import Shared.Model.Context.WizardRequestContext
@@ -113,7 +114,7 @@ importAndConvertBundle contentS fromRegistry =
         encodedPb <- migrateKnowledgeModelBundle content
         case eitherDecode . encode $ encodedPb of
           Right pb -> do
-            pkg <- importBundle pb workspaceUuid
+            pkg <- importBundle pb workspaceUuid fromRegistry
             al_importKnowledgeModel fromRegistry pkg
             return pkg
           Left error -> do
@@ -123,13 +124,13 @@ importAndConvertBundle contentS fromRegistry =
         logWarnI _CMP_SERVICE ("Could not deserialize Knowledge Model Bundle content (" ++ show error ++ ")")
         throwError . UserError $ _ERROR_API_COMMON__CANT_DESERIALIZE_OBJ
 
-importBundle :: WizardRequestContextC s m => KnowledgeModelBundle -> Maybe U.UUID -> m KnowledgeModelPackageSimpleDTO
-importBundle pb workspaceUuid =
+importBundle :: WizardRequestContextC s m => KnowledgeModelBundle -> Maybe U.UUID -> Bool -> m KnowledgeModelPackageSimpleDTO
+importBundle pb workspaceUuid fromRegistry =
   runInTransaction $ do
     pkg <- extractMainPackage pb
     forM_ pb.packages (validateIdentifierFormat "id" . (.id))
     validatePackageIdUniqueness (createCoordinate pkg) workspaceUuid
-    pkgs <- forM pb.packages (importPackage workspaceUuid (createCoordinate pkg))
+    pkgs <- forM pb.packages (importPackage workspaceUuid (createCoordinate pkg) fromRegistry)
     case lastSafe . catMaybes $ pkgs of
       Just createdPkg -> return createdPkg
       Nothing -> throwError . UserError $ _ERROR_VALIDATION__PKG_ID_UNIQUENESS (show . createCoordinate $ pkg)
@@ -142,8 +143,8 @@ importBundle pb workspaceUuid =
 -- --------------------------------
 -- PRIVATE
 -- --------------------------------
-importPackage :: WizardRequestContextC s m => Maybe U.UUID -> Coordinate -> KnowledgeModelBundlePackage -> m (Maybe KnowledgeModelPackageSimpleDTO)
-importPackage workspaceUuid mainCoordinate dto =
+importPackage :: WizardRequestContextC s m => Maybe U.UUID -> Coordinate -> Bool -> KnowledgeModelBundlePackage -> m (Maybe KnowledgeModelPackageSimpleDTO)
+importPackage workspaceUuid mainCoordinate fromRegistry dto =
   runInTransaction $ do
     tenantUuid <- asks (.tenantUuid')
     uuid <- liftIO generateUuid
@@ -155,6 +156,7 @@ importPackage workspaceUuid mainCoordinate dto =
       validateKmValidity events pkg.previousPackageUuid
       let fixedKmEvents = fixTimestampsIfNeeded kmEvents
       createdPkg <- catchError (createPackage (pkg, fixedKmEvents)) (handleCreatePackageError pkg)
+      emitEvent (KnowledgeModelPublishedEvent pkg (if fromRegistry then RegistryPackageSource else FilePackageSource))
       return . Just $ createdPkg
   where
     skipIfPackageIsAlreadyImported pkg callback

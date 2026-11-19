@@ -26,6 +26,7 @@ import Shared.Database.DAO.User.UserDAO
 import Shared.Database.DAO.WizardCommon
 import Shared.Localization.Messages.Public (_ERROR_VALIDATION__FORBIDDEN)
 import Shared.Localization.Messages.WizardPublic
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Common.Page
 import Shared.Model.Common.Pageable
 import Shared.Model.Common.Sort
@@ -102,6 +103,7 @@ createDocument reqDto =
     let doc = fromCreateDTO reqDto uuid (Just ctx.hash) mCutOffEventUuid mCurrentUser project.tenantUuid project.workspaceUuid now
     insertDocument doc
     al_createDocument doc project tml format
+    emitEvent (DocumentCreatedEvent doc)
     publishToPersistentCommandQueue doc tml format ctx
     return $ toDTOWithDocTemplate doc project Nothing [] tml format
 
@@ -111,6 +113,7 @@ deleteDocument docUuid =
     doc <- findDocumentByUuid docUuid
     checkEditPermissionToDoc doc.projectUuid
     al_deleteDocument doc
+    emitEvent (DocumentDeletedEvent doc)
     void $ deleteDocumentByUuid docUuid
 
 downloadDocument :: WizardRequestContextC s m => Int -> U.UUID -> m TemporaryFileDTO

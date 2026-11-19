@@ -23,6 +23,7 @@ import Shared.Database.DAO.KnowledgeModel.KnowledgeModelEditorDAO
 import Shared.Database.DAO.Project.ProjectDAO
 import Shared.Database.DAO.WizardCommon
 import Shared.Localization.Messages.KnowledgeModel.Public
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Common.Page
 import Shared.Model.Common.Pageable
 import Shared.Model.Common.Sort
@@ -178,6 +179,7 @@ modifyDraft dtUuid reqDto =
           void $ deleteDraftDataByDocumentTemplateUuid dtUuid
           publishGeneratePotFileCommand draftUpdated
           al_publishDocumentTemplate draftUpdated
+          emitEvent (DocumentTemplatePublishedEvent draftUpdated EditorDocumentTemplateSource)
       )
     return $ toDraftDetail' draftUpdated formatsUpdated
 

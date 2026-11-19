@@ -8,7 +8,6 @@ data AuditLogEventDefinition c d = AuditLogEventDefinition
   , action :: String
   , description :: String
   , scope :: AuditLogScope
-  , eventBridge :: Bool
   , entityType :: AuditLogEntityType
   , entityDescription :: String
   , example :: d
@@ -20,12 +19,11 @@ auditLogEvent
   -> String
   -> String
   -> AuditLogScope
-  -> Bool
   -> AuditLogEntityType
   -> String
   -> d
   -> AuditLogEventDefinition c d
-auditLogEvent component action description scope eventBridge entityType entityDescription example =
+auditLogEvent component action description scope entityType entityDescription example =
   AuditLogEventDefinition {changesExample = Nothing, ..}
 
 withChangesExample :: c -> AuditLogEventDefinition c d -> AuditLogEventDefinition c d

@@ -11,6 +11,7 @@ import Shared.Database.DAO.Project.ProjectCacheDAO
 import Shared.Database.DAO.Project.ProjectDAO
 import Shared.Database.DAO.Project.ProjectFileDAO
 import Shared.Database.DAO.WizardCommon
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Common.Page
 import Shared.Model.Common.Pageable
 import Shared.Model.Common.Sort
@@ -56,6 +57,7 @@ createProjectFile projectUuid questionUuid reqDto =
     putFile projectUuid uuid reqDto.contentType reqDto.content
     addFile projectUuid (toSimple projectFile)
     al_uploadProjectFile project projectFile
+    emitEvent (ProjectFileUploadedEvent project projectFile)
     return $ toList projectFile project mCurrentUser
 
 cloneProjectFiles :: WizardRequestContextC s m => U.UUID -> U.UUID -> m [(ProjectFile, ProjectFile)]
@@ -92,4 +94,5 @@ deleteProjectFile projectUuid fileUuid = do
     projectFile <- findProjectFileByProjectUuidAndUuid projectUuid fileUuid
     void $ deleteProjectFileByUuid fileUuid
     al_deleteProjectFile project projectFile
+    emitEvent (ProjectFileDeletedEvent project projectFile)
     void $ deleteProjectCacheByProjectUuid projectUuid

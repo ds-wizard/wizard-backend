@@ -15,6 +15,7 @@ import Shared.Database.DAO.User.UserGroupMembershipDAO
 import Shared.Database.DAO.WizardCommon
 import Shared.Localization.Messages.User.Public
 import Shared.Localization.Messages.Workspace.Public
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Context.RequestContextHelpers
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Error.Error
@@ -45,12 +46,15 @@ modifyUserGroupMembership userGroupUuid members =
     oldMembers <- findUsersByUserGroupUuid userGroupUuid
     memberships <- findUserGroupMembershipsByUserGroupUuid userGroupUuid
     let userUuidsToDelete = filter (`notElem` fmap (.userUuid) members) (fmap (.userUuid) memberships)
+    let userUuidsToAdd = filter (`notElem` fmap (.userUuid) memberships) (fmap (.userUuid) members)
     applyMembershipChanges userGroup memberships members
     unless (null userUuidsToDelete) (deleteUserGroupMembershipsByUserGroupUuidAndUserUuids userGroupUuid userUuidsToDelete)
     newMembers <- findUsersByUserGroupUuid userGroupUuid
     now <- liftIO getCurrentTimeInMicroseconds
     updateUserGroupByUuid $ userGroup {updatedAt = now}
     al_updateMembers userGroup oldMembers newMembers
+    traverse_ (emitEvent . UserGroupMemberAddedEvent userGroup) userUuidsToAdd
+    traverse_ (emitEvent . UserGroupMemberRemovedEvent userGroup) userUuidsToDelete
     unless (null userUuidsToDelete) (removeUserGroupMembersFromOnlineUsers userGroupUuid userUuidsToDelete)
     return members
 

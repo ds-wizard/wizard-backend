@@ -20,6 +20,7 @@ import Shared.Integration.Http.Registry.Runner
 import Shared.Localization.Messages.Internal
 import Shared.Localization.Messages.KnowledgeModel.Public
 import Shared.Localization.Messages.WizardPublic
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Context.AclContext
 import Shared.Model.Context.RequestContextHelpers
 import Shared.Model.Context.WizardRequestContext
@@ -99,6 +100,7 @@ importAndConvertBundle contentS fromRegistry =
       traverse_ (importAsset dt) assetContents
       publishGeneratePotFileCommand dt
       al_importDocumentTemplate fromRegistry dt
+      emitEvent (DocumentTemplatePublishedEvent dt (if fromRegistry then RegistryDocumentTemplateSource else FileDocumentTemplateSource))
       return . toSimple $ dt
     Left error -> throwError error
 

@@ -1,8 +1,10 @@
 module Shared.Service.Workspace.WorkspaceMembershipService where
 
-import Control.Monad (unless, void)
+import Control.Monad (unless, void, when)
 import Control.Monad.Except (throwError)
+import Control.Monad.Reader (asks)
 import Data.Foldable (traverse_)
+import Data.Maybe (isNothing)
 import Data.Time
 import qualified Data.UUID as U
 
@@ -15,6 +17,7 @@ import Shared.Database.DAO.Workspace.WorkspaceMembershipDAO
 import Shared.Localization.Messages.Public
 import Shared.Localization.Messages.WizardPublic
 import Shared.Localization.Messages.Workspace.Public
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Error.Error
 import Shared.Model.Project.ProjectSimpleWithPerm
@@ -34,19 +37,24 @@ addUserToSingleWorkspace tenantUuid userUuid now = do
   unless tenant.multiWorkspace $ do
     workspaces <- findWorkspacesByTenantUuid tenantUuid
     case workspaces of
-      [workspace] -> addWorkspaceMembership workspace userUuid Nothing now
+      [workspace] -> do
+        roleUuid <- addWorkspaceMembership workspace userUuid Nothing now
+        currentTenantUuid <- asks (.tenantUuid')
+        when (tenantUuid == currentTenantUuid) (emitEvent (WorkspaceMemberAddedEvent workspace.uuid userUuid roleUuid))
       [] -> throwError $ NotExistsError (_ERROR_VALIDATION__ABSENCE "workspace")
       _ -> throwError $ UserError _ERROR_SERVICE_WORKSPACE__MULTIPLE_WORKSPACES
 
-addWorkspaceMembership :: WizardRequestContextC s m => Workspace -> U.UUID -> Maybe U.UUID -> UTCTime -> m ()
+addWorkspaceMembership :: WizardRequestContextC s m => Workspace -> U.UUID -> Maybe U.UUID -> UTCTime -> m U.UUID
 addWorkspaceMembership workspace userUuid mRoleUuid now = do
   roleUuid <- resolveMemberRoleUuid workspace mRoleUuid
   void $ insertWorkspaceMembership (toMembership workspace.uuid userUuid roleUuid workspace.tenantUuid now)
+  return roleUuid
 
 saveWorkspaceMembership :: WizardRequestContextC s m => Workspace -> U.UUID -> Maybe U.UUID -> UTCTime -> m (Maybe WorkspaceMembership, WorkspaceMembership)
 saveWorkspaceMembership workspace userUuid mRoleUuid now = do
   mOldMembership <- findWorkspaceMembership' workspace.uuid userUuid
-  addWorkspaceMembership workspace userUuid mRoleUuid now
+  roleUuid <- addWorkspaceMembership workspace userUuid mRoleUuid now
+  when (isNothing mOldMembership) (emitEvent (WorkspaceMemberAddedEvent workspace.uuid userUuid roleUuid))
   updatePermsForWorkspace workspace.uuid
   membership <- findWorkspaceMembership workspace.uuid userUuid
   whenAuditLogEnabled $ al_saveWorkspaceMembership workspace mOldMembership membership
@@ -66,6 +74,7 @@ removeWorkspaceMembership workspaceUuid userUuid = do
   deleteUserGroupMembershipsInWorkspaceByUserUuid workspaceUuid userUuid
   deleteProjectPermsInWorkspaceByUserUuid workspaceUuid userUuid
   void $ deleteWorkspaceMembership workspaceUuid userUuid
+  emitEvent (WorkspaceMemberRemovedEvent workspaceUuid userUuid)
   traverse_ (\userGroupUuid -> removeUserGroupMembersFromOnlineUsers userGroupUuid [userUuid]) userGroupUuids
   updatePermsForWorkspace workspaceUuid
   traverse_ (deleteProjectCacheByProjectUuid . (.uuid)) projects

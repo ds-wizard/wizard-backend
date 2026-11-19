@@ -10,6 +10,7 @@ import Shared.Database.DAO.Package.KnowledgeModelPackageDAO (findPackageByUuid)
 import Shared.Database.DAO.Project.ProjectDAO
 import Shared.Database.DAO.Project.ProjectEventDAO
 import Shared.Database.DAO.WizardCommon
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Coordinate.Coordinate
 import Shared.Model.DocumentTemplate.DocumentTemplate
@@ -60,6 +61,7 @@ migrateProject projectUuid reqDto =
             :: Project
     updateProjectByUuid updatedProject
     al_migrateProject project newPkg
+    emitEvent (ProjectMigratedEvent updatedProject project.knowledgeModelPackageUuid newPkg.uuid)
     insertProjectEvents (fmap (toEvent project.uuid project.tenantUuid) deltaEvents ++ phaseEvents)
     logOutOnlineUsersWhenProjectDramaticallyChanged project.uuid
     getProjectDetailQuestionnaireByUuid project.uuid

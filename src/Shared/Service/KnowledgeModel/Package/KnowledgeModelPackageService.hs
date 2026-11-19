@@ -1,5 +1,6 @@
 module Shared.Service.KnowledgeModel.Package.KnowledgeModelPackageService where
 
+import Control.Monad (when)
 import Control.Monad.Reader (asks)
 import Data.Foldable (traverse_)
 import qualified Data.UUID as U
@@ -14,6 +15,7 @@ import Shared.Database.DAO.Package.KnowledgeModelPackageDAO
 import Shared.Database.DAO.Package.KnowledgeModelPackageEventDAO
 import Shared.Database.DAO.Registry.RegistryKnowledgeModelPackageDAO
 import Shared.Database.DAO.WizardCommon
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Common.Page
 import Shared.Model.Common.PageMetadata
 import Shared.Model.Common.Pageable
@@ -82,7 +84,9 @@ modifyPackage pkgUuid reqDto =
     checkManagePermissionToPackage pkgUuid
     pkg <- findPackageByUuid pkgUuid
     updatePackagePhaseAndPublicByUuid pkgUuid reqDto.phase reqDto.public
-    al_modifyKnowledgeModel pkg (pkg {phase = reqDto.phase, public = reqDto.public} :: KnowledgeModelPackage)
+    let updatedPkg = pkg {phase = reqDto.phase, public = reqDto.public} :: KnowledgeModelPackage
+    al_modifyKnowledgeModel pkg updatedPkg
+    when (pkg.phase /= DeprecatedKnowledgeModelPackagePhase && updatedPkg.phase == DeprecatedKnowledgeModelPackagePhase) (emitEvent (KnowledgeModelDeprecatedEvent updatedPkg))
     return reqDto
 
 deletePackage :: WizardRequestContextC s m => U.UUID -> Maybe Bool -> m ()
@@ -94,6 +98,7 @@ deletePackage uuid mAllVersions =
     dependents <- toLibraryDependents <$> findPackageDependents (fmap (.uuid) pkgs)
     checkDeleteAllowed dependents
     al_deleteKnowledgeModel pkg mAllVersions pkgs dependents
+    traverse_ (emitEvent . KnowledgeModelDeletedEvent) pkgs
     traverse_ (deletePackageByUuid . (.uuid)) pkgs
     traverse_ (logOutOnlineUsersWhenProjectDramaticallyChanged . (.uuid)) dependents.projects
     traverse_ (logOutOnlineUsersWhenKnowledgeModelEditorDramaticallyChanged . (.uuid)) dependents.editors

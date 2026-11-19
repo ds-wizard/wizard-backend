@@ -1,7 +1,7 @@
 module Shared.Util.Crypto where
 
 import Crypto.Cipher.AES (AES256)
-import Crypto.Cipher.Types (BlockCipher (..), Cipher (..), nullIV)
+import Crypto.Cipher.Types (BlockCipher (..), Cipher (..), IV, makeIV, nullIV)
 import Crypto.Error (throwCryptoError)
 import Crypto.Hash (Digest, MD5 (..), SHA256 (..), hash, hashlazy)
 import Crypto.MAC.HMAC (HMAC, hmac, hmacGetDigest)
@@ -12,6 +12,7 @@ import Data.ByteArray.Encoding (Base (..), convertToBase)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Maybe (fromMaybe)
 import Data.PEM (pemContent, pemName, pemParseBS)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -36,6 +37,24 @@ encryptAES256Raw key = ctrCombine ctx nullIV
   where
     ctx :: AES256
     ctx = throwCryptoError $ cipherInit key
+
+encryptAES256WithRandomIV :: String -> String -> IO String
+encryptAES256WithRandomIV key plainData = do
+  ivBytes <- getRandomBytes 16 :: IO BS.ByteString
+  return . BS.unpack . B64_Types.extractBase64 . B64.encodeBase64' $ ivBytes <> ctrWithIV key ivBytes (BS.pack plainData)
+
+decryptAES256WithRandomIV :: String -> String -> String
+decryptAES256WithRandomIV key encryptedData =
+  let (ivBytes, cipherText) = BS.splitAt 16 (B64.decodeBase64Lenient . BS.pack $ encryptedData)
+   in BS.unpack (ctrWithIV key ivBytes cipherText)
+
+ctrWithIV :: String -> BS.ByteString -> BS.ByteString -> BS.ByteString
+ctrWithIV key ivBytes = ctrCombine ctx iv
+  where
+    ctx :: AES256
+    ctx = throwCryptoError $ cipherInit (BS.pack key)
+    iv :: IV AES256
+    iv = fromMaybe nullIV (makeIV ivBytes)
 
 decryptAES256 :: String -> String -> String
 decryptAES256 = encryptAES256

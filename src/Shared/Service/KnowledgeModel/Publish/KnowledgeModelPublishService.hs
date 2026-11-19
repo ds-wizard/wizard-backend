@@ -17,6 +17,8 @@ import Shared.Database.DAO.KnowledgeModel.KnowledgeModelLocaleDAO
 import Shared.Database.DAO.KnowledgeModel.KnowledgeModelMigrationDAO
 import Shared.Database.DAO.Package.KnowledgeModelPackageDAO
 import Shared.Database.DAO.WizardCommon
+import Shared.Model.Automation.AutomationEvent
+import Shared.Model.Automation.AutomationHook
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Coordinate.Coordinate
 import Shared.Model.KnowledgeModel.Editor.KnowledgeModelEditor
@@ -24,6 +26,7 @@ import Shared.Model.KnowledgeModel.Editor.KnowledgeModelEditorPublication
 import Shared.Model.KnowledgeModel.Event.KnowledgeModelEvent
 import Shared.Model.KnowledgeModel.Migration.KnowledgeModelMigration
 import Shared.Model.KnowledgeModel.Package.KnowledgeModelPackage
+import Shared.Service.Automation.AutomationHookService
 import Shared.Service.KnowledgeModel.Editor.Collaboration.CollaborationService
 import Shared.Service.KnowledgeModel.Editor.EditorAcl
 import Shared.Service.KnowledgeModel.Editor.EditorAuditLog
@@ -116,8 +119,10 @@ doPublishPackage version kmEditor kmEvents description readme mForkOfPkgId mMerg
   now <- liftIO getCurrentTimeInMicroseconds
   workspaceUuid <- ownerWorkspaceUuid kmEditor.workspaceUuid
   let (pkg, pkgEvents) = fromPackage kmEditor uuid workspaceUuid mForkOfPkgId mMergeCheckpointPkgId version description readme squashedKmEvents now
+  _ <- checkAutomationHook (KnowledgeModelPublishHook pkg)
   createdPkg <- createPackage (pkg, pkgEvents)
   al_publishKnowledgeModel kmEditor pkg
+  emitEvent (KnowledgeModelPublishedEvent pkg EditorPackageSource)
   copyLocalesForPublishedPackage mLocaleUuids kmEditor.previousPackageUuid pkg.uuid
   let updatedKmEditor = kmEditor {previousPackageUuid = Just pkg.uuid, updatedAt = now} :: KnowledgeModelEditor
   updateKnowledgeModelEditorByUuid updatedKmEditor

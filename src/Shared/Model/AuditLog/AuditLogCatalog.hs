@@ -144,7 +144,7 @@ workspacesMemberRoleChange =
     AuditLogWorkspaceMemberRoleChangeData {member = exampleUser, oldRole = exampleWorkspaceRole, newRole = AuditLogRef {uuid = u' "0b6f2d4e-8c1a-4e7b-9d3f-5a2c7e9b1d40", name = "Admin"}}
 
 workspaceEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
-workspaceEvent action description = auditLogEvent "workspaces" action description WorkspaceAuditLogScope True WorkspaceAuditLogEntityType
+workspaceEvent action description = auditLogEvent "workspaces" action description WorkspaceAuditLogScope WorkspaceAuditLogEntityType
 
 exampleWorkspaceRole :: AuditLogRef
 exampleWorkspaceRole = AuditLogRef {uuid = u' "9e3b5c7d-1f2a-4b6c-8d0e-3a5b7c9d1e2f", name = "User"}
@@ -152,7 +152,7 @@ exampleWorkspaceRole = AuditLogRef {uuid = u' "9e3b5c7d-1f2a-4b6c-8d0e-3a5b7c9d1
 -- ---------------------------------------------------------------------------------------------------------------------
 usersCreateByAdmin :: AuditLogEventDefinition () AuditLogUserData
 usersCreateByAdmin =
-  auditLogEvent "users" "createByAdmin" "An administrator created a user." OrganizationAuditLogScope True UserAuditLogEntityType "The created user; entity.name is the email." exampleUserData
+  auditLogEvent "users" "createByAdmin" "An administrator created a user." OrganizationAuditLogScope UserAuditLogEntityType "The created user; entity.name is the email." exampleUserData
 
 exampleUserData :: AuditLogUserData
 exampleUserData = AuditLogUserData {firstName = "Sofia", lastName = "Novak", affiliation = Just "Physics Department", role = exampleRole}
@@ -166,18 +166,17 @@ mcpConnect =
   mcpEvent
     "connect"
     "An MCP client exchanged an authorization code for a token of a user."
-    True
     AuditLogMcpConnectData {tokenUuid = exampleTokenUuid, clientName = Just "Claude"}
 
 mcpTokenDelete :: AuditLogEventDefinition () AuditLogSessionData
-mcpTokenDelete = mcpEvent "tokenDelete" "An MCP token of a user was deleted." True exampleSessionData
+mcpTokenDelete = mcpEvent "tokenDelete" "An MCP token of a user was deleted." exampleSessionData
 
 mcpTokenExpire :: AuditLogEventDefinition () AuditLogSessionData
-mcpTokenExpire = mcpEvent "tokenExpire" "An MCP token of a user expired." False exampleSessionData
+mcpTokenExpire = mcpEvent "tokenExpire" "An MCP token of a user expired." exampleSessionData
 
-mcpEvent :: String -> String -> Bool -> d -> AuditLogEventDefinition c d
-mcpEvent action description eventBridge =
-  auditLogEvent "mcp" action description OrganizationAuditLogScope eventBridge UserAuditLogEntityType "The user the token belongs to; entity.name is the email."
+mcpEvent :: String -> String -> d -> AuditLogEventDefinition c d
+mcpEvent action description =
+  auditLogEvent "mcp" action description OrganizationAuditLogScope UserAuditLogEntityType "The user the token belongs to; entity.name is the email."
 
 exampleTokenUuid :: U.UUID
 exampleTokenUuid = u' "e1a9f3c7-2d48-4b6e-9f05-8c3b7a2d1e46"
@@ -188,16 +187,16 @@ exampleSessionData = AuditLogSessionData {tokenUuid = exampleTokenUuid, name = "
 -- ---------------------------------------------------------------------------------------------------------------------
 userGroupsCreate :: AuditLogEventDefinition () AuditLogUserGroupData
 userGroupsCreate =
-  auditLogEvent "userGroups" "create" "A user group was created in a workspace." WorkspaceAuditLogScope True UserGroupAuditLogEntityType "The created user group." exampleUserGroupData
+  auditLogEvent "userGroups" "create" "A user group was created in a workspace." WorkspaceAuditLogScope UserGroupAuditLogEntityType "The created user group." exampleUserGroupData
 
 userGroupsUpdate :: AuditLogEventDefinition AuditLogUserGroupChanges NoData
 userGroupsUpdate =
   withChangesExample AuditLogUserGroupChanges {name = Nothing, description = change (Just "Lab members") Nothing, private = change False True} $
-    auditLogEvent "userGroups" "update" "User group settings changed. The changed fields are in changes." WorkspaceAuditLogScope True UserGroupAuditLogEntityType "The changed user group; entity.name is the name after the change." NoData
+    auditLogEvent "userGroups" "update" "User group settings changed. The changed fields are in changes." WorkspaceAuditLogScope UserGroupAuditLogEntityType "The changed user group; entity.name is the name after the change." NoData
 
 userGroupsDelete :: AuditLogEventDefinition () AuditLogUserGroupData
 userGroupsDelete =
-  auditLogEvent "userGroups" "delete" "A user group was deleted." WorkspaceAuditLogScope True UserGroupAuditLogEntityType "The deleted user group." exampleUserGroupData
+  auditLogEvent "userGroups" "delete" "A user group was deleted." WorkspaceAuditLogScope UserGroupAuditLogEntityType "The deleted user group." exampleUserGroupData
 
 userGroupsUpdateMembers :: AuditLogEventDefinition () AuditLogUserGroupMembersData
 userGroupsUpdateMembers =
@@ -206,7 +205,6 @@ userGroupsUpdateMembers =
     "updateMembers"
     "Members of a user group were added, removed or got another membership type."
     WorkspaceAuditLogScope
-    True
     UserGroupAuditLogEntityType
     "The user group whose members changed."
     AuditLogUserGroupMembersData {add = [AuditLogUserGroupMember {user = exampleUser, membershipType = "MemberUserGroupMembershipType"}], edit = [], delete = []}
@@ -227,24 +225,24 @@ exampleUser =
 -- ---------------------------------------------------------------------------------------------------------------------
 pluginsEnable :: AuditLogEventDefinition () NoData
 pluginsEnable =
-  auditLogEvent "plugins" "enable" "A plugin was enabled for the organization or for a workspace." OrganizationOrWorkspaceAuditLogScope True PluginAuditLogEntityType "The enabled plugin; entity.name is its URL." NoData
+  auditLogEvent "plugins" "enable" "A plugin was enabled for the organization or for a workspace." OrganizationOrWorkspaceAuditLogScope PluginAuditLogEntityType "The enabled plugin; entity.name is its URL." NoData
 
 pluginsDisable :: AuditLogEventDefinition () NoData
 pluginsDisable =
-  auditLogEvent "plugins" "disable" "A plugin was disabled for the organization or for a workspace." OrganizationOrWorkspaceAuditLogScope True PluginAuditLogEntityType "The disabled plugin; entity.name is its URL." NoData
+  auditLogEvent "plugins" "disable" "A plugin was disabled for the organization or for a workspace." OrganizationOrWorkspaceAuditLogScope PluginAuditLogEntityType "The disabled plugin; entity.name is its URL." NoData
 
 pluginsConfigure :: AuditLogEventDefinition () NoData
 pluginsConfigure =
-  auditLogEvent "plugins" "configure" "The settings of a plugin were saved. The values are never recorded." OrganizationOrWorkspaceAuditLogScope True PluginAuditLogEntityType "The configured plugin; entity.name is its URL." NoData
+  auditLogEvent "plugins" "configure" "The settings of a plugin were saved. The values are never recorded." OrganizationOrWorkspaceAuditLogScope PluginAuditLogEntityType "The configured plugin; entity.name is its URL." NoData
 
 pluginsOverrideAllowedChange :: AuditLogEventDefinition AuditLogOverrideAllowedChanges NoData
 pluginsOverrideAllowedChange =
   withChangesExample exampleOverrideAllowedChanges $
-    auditLogEvent "plugins" "overrideAllowedChange" "Workspaces were allowed or forbidden to override the settings of a plugin." OrganizationAuditLogScope True PluginAuditLogEntityType "The plugin whose override permission changed; entity.name is its URL." NoData
+    auditLogEvent "plugins" "overrideAllowedChange" "Workspaces were allowed or forbidden to override the settings of a plugin." OrganizationAuditLogScope PluginAuditLogEntityType "The plugin whose override permission changed; entity.name is its URL." NoData
 
 pluginsOverrideReset :: AuditLogEventDefinition () NoData
 pluginsOverrideReset =
-  auditLogEvent "plugins" "overrideReset" "A workspace dropped its override of the settings of a plugin." WorkspaceAuditLogScope True PluginAuditLogEntityType "The plugin whose workspace override was reset; entity.name is its URL." NoData
+  auditLogEvent "plugins" "overrideReset" "A workspace dropped its override of the settings of a plugin." WorkspaceAuditLogScope PluginAuditLogEntityType "The plugin whose workspace override was reset; entity.name is its URL." NoData
 
 -- ---------------------------------------------------------------------------------------------------------------------
 settingsUpdate :: AuditLogEventDefinition AuditLogSettingsChanges AuditLogSettingsUpdateData
@@ -284,7 +282,7 @@ settingsLogoDelete =
 
 settingsEvent :: String -> String -> AuditLogScope -> d -> AuditLogEventDefinition c d
 settingsEvent action description scope =
-  uncurry (auditLogEvent "settings" action description scope True) (settingsEntityOf scope)
+  uncurry (auditLogEvent "settings" action description scope) (settingsEntityOf scope)
 
 settingsEntityOf :: AuditLogScope -> (AuditLogEntityType, String)
 settingsEntityOf OrganizationAuditLogScope = (OrganizationAuditLogEntityType, "The organization.")
@@ -306,31 +304,30 @@ exampleOverrideAllowedChanges = AuditLogOverrideAllowedChanges {workspaceOverrid
 
 -- ---------------------------------------------------------------------------------------------------------------------
 localesCreate :: AuditLogEventDefinition () AuditLogLocaleData
-localesCreate = localeEvent "create" "A UI locale was uploaded for a language the organization did not have yet." True "The created locale." exampleLocaleData
+localesCreate = localeEvent "create" "A UI locale was uploaded for a language the organization did not have yet." "The created locale." exampleLocaleData
 
 localesReplace :: AuditLogEventDefinition () AuditLogLocaleReplaceData
 localesReplace =
   localeEvent
     "replace"
     "The PO file of a UI locale was replaced by an upload; officialSwitchedOff says whether the locale stopped being official."
-    True
     "The replaced locale."
     AuditLogLocaleReplaceData {code = "de", name = "Deutsch", oldPotVersion = Just "fw-client:4.31.0", newPotVersion = Just "fw-client:5.0.0", officialSwitchedOff = True}
 
 localesUpdate :: AuditLogEventDefinition AuditLogLocaleChanges NoData
 localesUpdate =
   withChangesExample AuditLogLocaleChanges {enabled = change False True, defaultLocale = Nothing} $
-    localeEvent "update" "A UI locale was enabled, disabled or made the default. The changed fields are in changes." True "The changed locale." NoData
+    localeEvent "update" "A UI locale was enabled, disabled or made the default. The changed fields are in changes." "The changed locale." NoData
 
 localesDelete :: AuditLogEventDefinition () AuditLogLocaleData
-localesDelete = localeEvent "delete" "A UI locale was deleted." True "The deleted locale." exampleLocaleData
+localesDelete = localeEvent "delete" "A UI locale was deleted." "The deleted locale." exampleLocaleData
 
 localesExport :: AuditLogEventDefinition () AuditLogLocaleData
-localesExport = localeEvent "export" "The PO file of a UI locale was downloaded." False "The exported locale." exampleLocaleData
+localesExport = localeEvent "export" "The PO file of a UI locale was downloaded." "The exported locale." exampleLocaleData
 
-localeEvent :: String -> String -> Bool -> String -> d -> AuditLogEventDefinition c d
-localeEvent action description eventBridge =
-  auditLogEvent "locales" action description OrganizationAuditLogScope eventBridge LocaleAuditLogEntityType
+localeEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
+localeEvent action description =
+  auditLogEvent "locales" action description OrganizationAuditLogScope LocaleAuditLogEntityType
 
 exampleLocaleData :: AuditLogLocaleData
 exampleLocaleData = AuditLogLocaleData {code = "de", name = "Deutsch", potVersion = Just "fw-client:5.0.0", official = True}
@@ -341,7 +338,6 @@ mailTemplateLocalesCreate =
   mailTemplateLocaleEvent
     "create"
     "A mail template locale was uploaded for a language the organization did not have yet."
-    True
     "The created mail template locale."
     exampleMailTemplateLocaleData
 
@@ -350,7 +346,6 @@ mailTemplateLocalesReplace =
   mailTemplateLocaleEvent
     "replace"
     "The PO file of a mail template locale was replaced by an upload; officialSwitchedOff says whether the locale stopped being official."
-    True
     "The replaced mail template locale."
     AuditLogLocaleReplaceData
       { code = "de"
@@ -366,26 +361,24 @@ mailTemplateLocalesUpdate =
     mailTemplateLocaleEvent
       "update"
       "A mail template locale was enabled, disabled or made the default. The changed fields are in changes."
-      True
       "The changed mail template locale."
       NoData
 
 mailTemplateLocalesDelete :: AuditLogEventDefinition () AuditLogLocaleData
 mailTemplateLocalesDelete =
-  mailTemplateLocaleEvent "delete" "A mail template locale was deleted." True "The deleted mail template locale." exampleMailTemplateLocaleData
+  mailTemplateLocaleEvent "delete" "A mail template locale was deleted." "The deleted mail template locale." exampleMailTemplateLocaleData
 
 mailTemplateLocalesExport :: AuditLogEventDefinition () AuditLogLocaleData
 mailTemplateLocalesExport =
   mailTemplateLocaleEvent
     "export"
     "The PO file of a mail template locale was downloaded."
-    False
     "The exported mail template locale."
     exampleMailTemplateLocaleData
 
-mailTemplateLocaleEvent :: String -> String -> Bool -> String -> d -> AuditLogEventDefinition c d
-mailTemplateLocaleEvent action description eventBridge =
-  auditLogEvent "mailTemplateLocales" action description OrganizationAuditLogScope eventBridge MailTemplateLocaleAuditLogEntityType
+mailTemplateLocaleEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
+mailTemplateLocaleEvent action description =
+  auditLogEvent "mailTemplateLocales" action description OrganizationAuditLogScope MailTemplateLocaleAuditLogEntityType
 
 exampleMailTemplateLocaleData :: AuditLogLocaleData
 exampleMailTemplateLocaleData = AuditLogLocaleData {code = "de", name = "Deutsch", potVersion = Just "fw-mail-templates:5.0.0", official = True}
@@ -393,48 +386,46 @@ exampleMailTemplateLocaleData = AuditLogLocaleData {code = "de", name = "Deutsch
 -- ---------------------------------------------------------------------------------------------------------------------
 knowledgeModelsImportFromFile :: AuditLogEventDefinition () AuditLogLibraryData
 knowledgeModelsImportFromFile =
-  knowledgeModelEvent "importFromFile" "A knowledge model bundle was imported from a file." True "The imported package (the newest version of the bundle)." exampleKnowledgeModelData
+  knowledgeModelEvent "importFromFile" "A knowledge model bundle was imported from a file." "The imported package (the newest version of the bundle)." exampleKnowledgeModelData
 
 knowledgeModelsPullFromRegistry :: AuditLogEventDefinition () AuditLogLibraryData
 knowledgeModelsPullFromRegistry =
-  knowledgeModelEvent "pullFromRegistry" "A knowledge model bundle was pulled from the registry." True "The pulled package (the newest version of the bundle)." exampleKnowledgeModelData
+  knowledgeModelEvent "pullFromRegistry" "A knowledge model bundle was pulled from the registry." "The pulled package (the newest version of the bundle)." exampleKnowledgeModelData
 
 knowledgeModelsExport :: AuditLogEventDefinition () AuditLogLibraryData
 knowledgeModelsExport =
-  knowledgeModelEvent "export" "A knowledge model bundle was exported to a file." False "The exported package." exampleKnowledgeModelData
+  knowledgeModelEvent "export" "A knowledge model bundle was exported to a file." "The exported package." exampleKnowledgeModelData
 
 knowledgeModelsPublish :: AuditLogEventDefinition () AuditLogLibraryPublishData
 knowledgeModelsPublish =
   knowledgeModelEvent
     "publish"
     "A knowledge model editor was published as a new package version, directly or by finishing a migration."
-    True
     "The published package."
     AuditLogLibraryPublishData {id = exampleKnowledgeModelData.id, version = exampleKnowledgeModelData.version, editor = exampleKnowledgeModelEditor}
 
 knowledgeModelsDeprecate :: AuditLogEventDefinition () AuditLogLibraryData
-knowledgeModelsDeprecate = knowledgeModelEvent "deprecate" "A knowledge model package was deprecated." True "The deprecated package." exampleKnowledgeModelData
+knowledgeModelsDeprecate = knowledgeModelEvent "deprecate" "A knowledge model package was deprecated." "The deprecated package." exampleKnowledgeModelData
 
 knowledgeModelsRestore :: AuditLogEventDefinition () AuditLogLibraryData
-knowledgeModelsRestore = knowledgeModelEvent "restore" "A deprecated knowledge model package was released again." True "The restored package." exampleKnowledgeModelData
+knowledgeModelsRestore = knowledgeModelEvent "restore" "A deprecated knowledge model package was released again." "The restored package." exampleKnowledgeModelData
 
 knowledgeModelsSetVisibility :: AuditLogEventDefinition AuditLogKnowledgeModelVisibilityChanges AuditLogLibraryData
 knowledgeModelsSetVisibility =
   withChangesExample AuditLogKnowledgeModelVisibilityChanges {public = change False True} $
-    knowledgeModelEvent "setVisibility" "A knowledge model package was made public or private. The change is in changes." True "The changed package." exampleKnowledgeModelData
+    knowledgeModelEvent "setVisibility" "A knowledge model package was made public or private. The change is in changes." "The changed package." exampleKnowledgeModelData
 
 knowledgeModelsDelete :: AuditLogEventDefinition () AuditLogLibraryDeleteData
 knowledgeModelsDelete =
   knowledgeModelEvent
     "delete"
     "A knowledge model package was deleted, one version or all versions; dependents counts what depended on the deleted versions."
-    True
     "The package the delete was requested for."
     AuditLogLibraryDeleteData {allVersions = True, deletedPackages = ["myorg:genomics:1.0.0", "myorg:genomics:1.1.0"], dependents = exampleDependents}
 
-knowledgeModelEvent :: String -> String -> Bool -> String -> d -> AuditLogEventDefinition c d
-knowledgeModelEvent action description eventBridge =
-  auditLogEvent "knowledgeModels" action description OrganizationOrWorkspaceAuditLogScope eventBridge KnowledgeModelAuditLogEntityType
+knowledgeModelEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
+knowledgeModelEvent action description =
+  auditLogEvent "knowledgeModels" action description OrganizationOrWorkspaceAuditLogScope KnowledgeModelAuditLogEntityType
 
 exampleKnowledgeModelData :: AuditLogLibraryData
 exampleKnowledgeModelData = AuditLogLibraryData {id = "myorg:genomics", version = "1.1.0"}
@@ -496,7 +487,7 @@ knowledgeModelEditorsMigrationCancel =
 
 knowledgeModelEditorEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
 knowledgeModelEditorEvent action description =
-  auditLogEvent "knowledgeModelEditors" action description WorkspaceAuditLogScope True KnowledgeModelEditorAuditLogEntityType
+  auditLogEvent "knowledgeModelEditors" action description WorkspaceAuditLogScope KnowledgeModelEditorAuditLogEntityType
 
 exampleKnowledgeModelEditorData :: AuditLogKnowledgeModelEditorData
 exampleKnowledgeModelEditorData = AuditLogKnowledgeModelEditorData {id = "myorg:genomics", version = "1.1.0", basedOn = Just exampleKnowledgeModel}
@@ -537,48 +528,46 @@ knowledgeModelSecretsDelete = knowledgeModelSecretEvent "delete" "A knowledge mo
 
 knowledgeModelSecretEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
 knowledgeModelSecretEvent action description =
-  auditLogEvent "knowledgeModelSecrets" action description OrganizationOrWorkspaceAuditLogScope True KnowledgeModelSecretAuditLogEntityType
+  auditLogEvent "knowledgeModelSecrets" action description OrganizationOrWorkspaceAuditLogScope KnowledgeModelSecretAuditLogEntityType
 
 -- ---------------------------------------------------------------------------------------------------------------------
 documentTemplatesImportFromFile :: AuditLogEventDefinition () AuditLogLibraryData
 documentTemplatesImportFromFile =
-  documentTemplateEvent "importFromFile" "A document template bundle was imported from a file." True "The imported template." exampleDocumentTemplateData
+  documentTemplateEvent "importFromFile" "A document template bundle was imported from a file." "The imported template." exampleDocumentTemplateData
 
 documentTemplatesPullFromRegistry :: AuditLogEventDefinition () AuditLogLibraryData
 documentTemplatesPullFromRegistry =
-  documentTemplateEvent "pullFromRegistry" "A document template bundle was pulled from the registry." True "The pulled template." exampleDocumentTemplateData
+  documentTemplateEvent "pullFromRegistry" "A document template bundle was pulled from the registry." "The pulled template." exampleDocumentTemplateData
 
 documentTemplatesExport :: AuditLogEventDefinition () AuditLogLibraryData
 documentTemplatesExport =
-  documentTemplateEvent "export" "A document template bundle was exported to a file." False "The exported template." exampleDocumentTemplateData
+  documentTemplateEvent "export" "A document template bundle was exported to a file." "The exported template." exampleDocumentTemplateData
 
 documentTemplatesPublish :: AuditLogEventDefinition () AuditLogLibraryPublishData
 documentTemplatesPublish =
   documentTemplateEvent
     "publish"
     "A document template editor was published; the draft became the released template with the same uuid."
-    True
     "The published template."
     AuditLogLibraryPublishData {id = exampleDocumentTemplateData.id, version = exampleDocumentTemplateData.version, editor = AuditLogRef {uuid = u' "3e5a7c9b-2d4f-4b6a-8e1c-5f7a9b1d3e46", name = "Questionnaire Report"}}
 
 documentTemplatesDeprecate :: AuditLogEventDefinition () AuditLogLibraryData
-documentTemplatesDeprecate = documentTemplateEvent "deprecate" "A document template was deprecated." True "The deprecated template." exampleDocumentTemplateData
+documentTemplatesDeprecate = documentTemplateEvent "deprecate" "A document template was deprecated." "The deprecated template." exampleDocumentTemplateData
 
 documentTemplatesRestore :: AuditLogEventDefinition () AuditLogLibraryData
-documentTemplatesRestore = documentTemplateEvent "restore" "A deprecated document template was released again." True "The restored template." exampleDocumentTemplateData
+documentTemplatesRestore = documentTemplateEvent "restore" "A deprecated document template was released again." "The restored template." exampleDocumentTemplateData
 
 documentTemplatesDelete :: AuditLogEventDefinition () AuditLogLibraryDeleteData
 documentTemplatesDelete =
   documentTemplateEvent
     "delete"
     "A document template was deleted, one version or all versions; dependents counts what depended on the deleted versions."
-    True
     "The template the delete was requested for."
     AuditLogLibraryDeleteData {allVersions = False, deletedPackages = ["myorg:questionnaire-report:2.0.0"], dependents = AuditLogLibraryDependentsData {editors = 0, projects = 2, documents = 5}}
 
-documentTemplateEvent :: String -> String -> Bool -> String -> d -> AuditLogEventDefinition c d
-documentTemplateEvent action description eventBridge =
-  auditLogEvent "documentTemplates" action description OrganizationOrWorkspaceAuditLogScope eventBridge DocumentTemplateAuditLogEntityType
+documentTemplateEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
+documentTemplateEvent action description =
+  auditLogEvent "documentTemplates" action description OrganizationOrWorkspaceAuditLogScope DocumentTemplateAuditLogEntityType
 
 exampleDocumentTemplateData :: AuditLogLibraryData
 exampleDocumentTemplateData = AuditLogLibraryData {id = "myorg:questionnaire-report", version = "2.0.0"}
@@ -619,7 +608,7 @@ documentTemplateEditorsFilesDelete =
 
 documentTemplateEditorEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
 documentTemplateEditorEvent action description =
-  auditLogEvent "documentTemplateEditors" action description OrganizationOrWorkspaceAuditLogScope True DocumentTemplateEditorAuditLogEntityType
+  auditLogEvent "documentTemplateEditors" action description OrganizationOrWorkspaceAuditLogScope DocumentTemplateEditorAuditLogEntityType
 
 exampleDocumentTemplateEditorData :: AuditLogDocumentTemplateEditorData
 exampleDocumentTemplateEditorData =
@@ -708,7 +697,7 @@ projectsDelete :: AuditLogEventDefinition () NoData
 projectsDelete = projectEvent "delete" "A project was deleted, by a user or because nobody had access to it any more." "The deleted project." NoData
 
 projectEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
-projectEvent action description = auditLogEvent "projects" action description WorkspaceAuditLogScope True ProjectAuditLogEntityType
+projectEvent action description = auditLogEvent "projects" action description WorkspaceAuditLogScope ProjectAuditLogEntityType
 
 exampleProject :: AuditLogRef
 exampleProject = AuditLogRef {uuid = u' "9c3a7d41-8e2b-4f6a-b1d0-5e7c2a9f3b64", name = "Marine Genomics DMP"}
@@ -759,7 +748,7 @@ documentsSubmit =
       }
 
 documentEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
-documentEvent action description = auditLogEvent "documents" action description WorkspaceAuditLogScope True DocumentAuditLogEntityType
+documentEvent action description = auditLogEvent "documents" action description WorkspaceAuditLogScope DocumentAuditLogEntityType
 
 -- ---------------------------------------------------------------------------------------------------------------------
 projectFilesUpload :: AuditLogEventDefinition () AuditLogProjectFileData
@@ -770,4 +759,4 @@ projectFilesDelete :: AuditLogEventDefinition () AuditLogProjectFileData
 projectFilesDelete = projectFileEvent "delete" "A file was deleted from a project." "The deleted file; entity.name is the file name." AuditLogProjectFileData {project = exampleProject}
 
 projectFileEvent :: String -> String -> String -> d -> AuditLogEventDefinition c d
-projectFileEvent action description = auditLogEvent "projectFiles" action description WorkspaceAuditLogScope True ProjectFileAuditLogEntityType
+projectFileEvent action description = auditLogEvent "projectFiles" action description WorkspaceAuditLogScope ProjectFileAuditLogEntityType

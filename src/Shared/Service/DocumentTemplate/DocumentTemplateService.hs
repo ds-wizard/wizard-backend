@@ -1,6 +1,6 @@
 module Shared.Service.DocumentTemplate.DocumentTemplateService where
 
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.Except (throwError)
 import Control.Monad.Reader (asks, liftIO)
 import Data.Foldable (traverse_)
@@ -24,6 +24,7 @@ import Shared.Database.DAO.Project.ProjectDAO (unsetDocumentTemplateInProjects)
 import Shared.Database.DAO.Registry.RegistryTemplateDAO
 import Shared.Database.DAO.WizardCommon
 import Shared.Localization.Messages.WizardPublic
+import Shared.Model.Automation.AutomationEvent
 import Shared.Model.Common.Page
 import Shared.Model.Common.PageMetadata
 import Shared.Model.Common.Pageable
@@ -118,6 +119,7 @@ modifyDocumentTemplate uuid reqDto =
     let templateUpdated = fromChangeDTO reqDto tml
     updateDocumentTemplateById templateUpdated
     al_modifyDocumentTemplate tml templateUpdated
+    when (tml.phase /= DeprecatedDocumentTemplatePhase && templateUpdated.phase == DeprecatedDocumentTemplatePhase) (emitEvent (DocumentTemplateDeprecatedEvent templateUpdated))
     deleteTemporalDocumentsByDocumentTemplateUuid uuid
     getDocumentTemplateByUuidDto uuid
 
@@ -136,6 +138,7 @@ deleteDocumentTemplate uuid mAllVersions =
     dependents <- toLibraryDependents <$> findDocumentTemplateDependents (fmap (.uuid) dts)
     checkDeleteAllowed dependents
     al_deleteDocumentTemplate dt mAllVersions dts dependents
+    traverse_ (emitEvent . DocumentTemplateDeletedEvent) dts
     traverse_ (deleteDocumentTemplateWithAssets . (.uuid)) dts
 
 -- --------------------------------

@@ -10,6 +10,8 @@ import Servant.Client (ClientEnv)
 
 import Shared.Api.Resource.User.UserDTO
 import Shared.Model.AuditLog.AuditLogSource
+import Shared.Model.Automation.AutomationEvent
+import Shared.Model.Automation.AutomationHook
 import Shared.Model.Cache.ServerCache
 import Shared.Model.Config.WizardServerConfig
 import Shared.Model.Context.ProgressReporter
@@ -35,6 +37,7 @@ class
   , HasField "websocketRegistry'" context WebsocketRegistry
   , HasField "nodeUuid'" context U.UUID
   , HasField "progressReporter'" context ProgressReporter
+  , HasField "workspaceRolePermissions'" context [String]
   ) =>
   WizardRequestContextType context
   where
@@ -49,3 +52,5 @@ class
 class (RequestContextC context ServerConfig m, WizardRequestContextType context) => WizardRequestContextC context m | m -> context where
   runRequestContextWithRequestContext :: m a -> context -> IO (Either String a)
   findTenantLimits :: U.UUID -> m TenantLimitBundleChange
+  emitEvent :: AutomationEvent -> m ()
+  runAutomationHook :: AutomationHook -> m AutomationHookDecision
