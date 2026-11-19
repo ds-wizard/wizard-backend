@@ -8,9 +8,9 @@ maintainer: Vojtech Knaisl <vknaisl@gmail.com>
 copyright: 2023 Vojtech Knaisl <vknaisl@gmail.com>
 license: Apache
 license-file: LICENSE.md
-homepage: https://github.com/ds-wizard/wizard-server
-git: git@github.com:ds-wizard/wizard-server.git
-bug-reports: https://github.com/ds-wizard/wizard-server/issues
+homepage: https://github.com/ds-wizard/wizard-backend
+git: git@github.com:ds-wizard/wizard-backend.git
+bug-reports: https://github.com/ds-wizard/wizard-backend/issues
 tested-with: GHC==9.10.3
 
 # Top-level keys starting with an underscore are ignored by hpack and serve as YAML anchor definitions.

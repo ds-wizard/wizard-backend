@@ -1,7 +1,7 @@
 # Wizard Server
 
 [![User Guide](https://img.shields.io/badge/docs-User%20Guide-informational)](https://guide.ds-wizard.org)
-[![License](https://img.shields.io/github/license/ds-wizard/wizard-server)](LICENSE.md)
+[![License](https://img.shields.io/github/license/ds-wizard/wizard-backend)](LICENSE.md)
 
 *Wizard Server is the core application of the Data Stewardship Wizard: knowledge models,
 projects, document generation, user and tenant management and real-time collaboration.*
