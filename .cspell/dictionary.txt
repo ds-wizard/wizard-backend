@@ -51,6 +51,7 @@ createdate
 Creds
 crypton
 cryptostore
+datastewardshipwizard
 Datei
 datenzee
 dcche
@@ -61,6 +62,8 @@ dealstage
 dealtype
 dedupe
 Deutsch
+diche
+dite
 docbook
 dtche
 dtdattr
