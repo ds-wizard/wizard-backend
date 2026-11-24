@@ -13,13 +13,13 @@ import Shared.Service.Submission.SubmissionService
 type List_GET =
   Header "Authorization" String
     :> Header "Host" String
-    :> "documents"
-    :> Capture "docUuid" U.UUID
+    :> "projects"
+    :> Capture "projectUuid" U.UUID
     :> "submissions"
     :> Get '[SafeJSON] (Headers '[Header "x-trace-uuid" String] [SubmissionList])
 
 list_GET
   :: WizardHandlerC s sm r rm => Maybe String -> Maybe String -> U.UUID -> sm (Headers '[Header "x-trace-uuid" String] [SubmissionList])
-list_GET mTokenHeader mServerUrl docUuid =
+list_GET mTokenHeader mServerUrl projectUuid =
   getAuthServiceExecutor mTokenHeader mServerUrl $ \runInAuthService ->
-    runInAuthService NoTransaction $ addTraceUuidHeader =<< getSubmissionsForDocument docUuid
+    runInAuthService NoTransaction $ addTraceUuidHeader =<< getSubmissionsForProject projectUuid

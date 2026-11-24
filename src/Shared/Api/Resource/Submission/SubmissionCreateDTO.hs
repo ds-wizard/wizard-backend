@@ -3,6 +3,6 @@ module Shared.Api.Resource.Submission.SubmissionCreateDTO where
 import GHC.Generics
 
 data SubmissionCreateDTO = SubmissionCreateDTO
-  { serviceId :: String
+  { definitionId :: String
   }
   deriving (Show, Eq, Generic)

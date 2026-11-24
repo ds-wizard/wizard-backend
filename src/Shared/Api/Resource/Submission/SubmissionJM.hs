@@ -2,6 +2,7 @@ module Shared.Api.Resource.Submission.SubmissionJM where
 
 import Data.Aeson
 
+import Shared.Api.Resource.Document.DocumentJM ()
 import Shared.Api.Resource.User.UserSuggestionJM ()
 import Shared.Model.Submission.Submission
 import Shared.Model.Submission.SubmissionList
@@ -22,4 +23,13 @@ instance ToJSON SubmissionList where
   toJSON = genericToJSON jsonOptions
 
 instance JsonSchema SubmissionList where
+  jsonSchema = genericJsonSchema jsonOptions
+
+instance FromJSON SubmissionDocumentList where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON SubmissionDocumentList where
+  toJSON = genericToJSON jsonOptions
+
+instance JsonSchema SubmissionDocumentList where
   jsonSchema = genericJsonSchema jsonOptions

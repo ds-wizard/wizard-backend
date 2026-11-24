@@ -15,11 +15,21 @@ data Submission = Submission
   , state :: SubmissionState
   , location :: Maybe String
   , returnedData :: Maybe String
-  , serviceId :: String
-  , documentUuid :: U.UUID
+  , definitionId :: String
+  , projectUuid :: U.UUID
+  , externalId :: Maybe String
+  , targetBaseUrl :: Maybe String
   , tenantUuid :: U.UUID
   , createdBy :: Maybe U.UUID
   , createdAt :: UTCTime
   , updatedAt :: UTCTime
+  }
+  deriving (Show, Eq, Generic)
+
+data SubmissionDocument = SubmissionDocument
+  { submissionUuid :: U.UUID
+  , documentUuid :: U.UUID
+  , position :: Int
+  , tenantUuid :: U.UUID
   }
   deriving (Show, Eq, Generic)

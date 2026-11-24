@@ -12,13 +12,15 @@ import WizardServer.Database.Migration.Production.Migration_5_0_0.Migration (run
 
 definition = (meta, migrate)
 
-meta = MigrationMeta {mmNumber = 5002000, mmName = "Submission definitions", mmDescription = "Replace submission services with named submission definitions"}
+meta = MigrationMeta {mmNumber = 5002000, mmName = "Submission definitions", mmDescription = "Replace submission services with named submission definitions and submit projects"}
 
 migrate :: Pool Connection -> LoggingT IO (Maybe Error)
 migrate dbPool = do
   createSubmissionDefinitionTables dbPool
   migrateSubmissionServices dbPool
   dropSubmissionServiceTables dbPool
+  migrateSubmissionsToProjects dbPool
+  createSubmissionTrigger dbPool
   return Nothing
 
 createSubmissionDefinitionTables :: Pool Connection -> LoggingT IO ()
@@ -134,4 +136,84 @@ dropSubmissionServiceTables dbPool =
 DROP TABLE settings_submission_service_supported_format;
 DROP TABLE settings_submission_service_request_header;
 DROP TABLE settings_submission_service;
+|]
+
+-- A submission belongs to a project now and references its documents through submission_document
+migrateSubmissionsToProjects :: Pool Connection -> LoggingT IO ()
+migrateSubmissionsToProjects dbPool =
+  runSql
+    dbPool
+    [r|
+ALTER TABLE submission RENAME COLUMN service_id TO definition_id;
+ALTER TABLE submission
+    ADD COLUMN project_uuid    uuid,
+    ADD COLUMN external_id     varchar,
+    ADD COLUMN target_base_url varchar;
+
+CREATE TABLE submission_document
+(
+    submission_uuid uuid    NOT NULL,
+    document_uuid   uuid    NOT NULL,
+    position        integer NOT NULL,
+    tenant_uuid     uuid    NOT NULL,
+    CONSTRAINT submission_document_pk PRIMARY KEY (submission_uuid, document_uuid),
+    CONSTRAINT submission_document_submission_uuid_fk FOREIGN KEY (submission_uuid) REFERENCES submission (uuid) ON DELETE CASCADE,
+    CONSTRAINT submission_document_document_uuid_fk FOREIGN KEY (document_uuid) REFERENCES document (uuid) ON DELETE CASCADE,
+    CONSTRAINT submission_document_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
+);
+
+CREATE INDEX submission_document_document_uuid_index ON submission_document (document_uuid);
+
+UPDATE submission
+SET project_uuid = document.project_uuid
+FROM document
+WHERE document.uuid = submission.document_uuid;
+
+INSERT INTO submission_document (submission_uuid, document_uuid, position, tenant_uuid)
+SELECT uuid, document_uuid, 0, tenant_uuid
+FROM submission
+WHERE document_uuid IS NOT NULL AND project_uuid IS NOT NULL;
+
+DELETE FROM submission WHERE project_uuid IS NULL;
+
+DROP INDEX IF EXISTS submission_document_uuid_index;
+ALTER TABLE submission DROP CONSTRAINT IF EXISTS submission_document_uuid_fk;
+ALTER TABLE submission DROP COLUMN document_uuid;
+ALTER TABLE submission ALTER COLUMN project_uuid SET NOT NULL;
+ALTER TABLE submission ADD CONSTRAINT submission_project_uuid_fk FOREIGN KEY (project_uuid) REFERENCES project (uuid) ON DELETE CASCADE;
+CREATE INDEX submission_project_uuid_index ON submission (project_uuid, tenant_uuid);
+|]
+
+-- When a document a submission waits for is finished, a "submission/submit" command (run as the submitting user) finishes the submission
+createSubmissionTrigger :: Pool Connection -> LoggingT IO ()
+createSubmissionTrigger dbPool =
+  runSql
+    dbPool
+    [r|
+CREATE OR REPLACE FUNCTION create_submission_command_on_document_finished()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    sub record;
+BEGIN
+    FOR sub IN SELECT submission.uuid, submission.tenant_uuid, submission.created_by
+               FROM submission_document
+               JOIN submission ON submission.uuid = submission_document.submission_uuid
+               WHERE submission_document.document_uuid = NEW.uuid
+                 AND submission.state = 'InProgressSubmissionState'
+    LOOP
+        INSERT INTO persistent_command (uuid, state, component, function, body, last_error_message, attempts, max_attempts, tenant_uuid, created_by, created_at, updated_at, last_trace_uuid)
+        VALUES (gen_random_uuid(), 'NewPersistentCommandState', 'submission', 'submit', jsonb_build_object('uuid', sub.uuid), NULL, 0, 3, sub.tenant_uuid, sub.created_by, now(), now(), NULL);
+        PERFORM pg_notify('persistent_command_channel', '');
+    END LOOP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_document_after_state_update_submission
+    AFTER UPDATE OF state
+    ON document
+    FOR EACH ROW
+    WHEN (OLD.state IS DISTINCT FROM NEW.state AND NEW.state IN ('DoneDocumentState', 'ErrorDocumentState'))
+EXECUTE FUNCTION create_submission_command_on_document_finished();
 |]

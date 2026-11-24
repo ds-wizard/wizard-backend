@@ -16,6 +16,7 @@ instance FromEnv ServerConfig where
     auditLog <- applyEnv serverConfig.auditLog
     cache <- applyEnv serverConfig.cache
     document <- applyEnv serverConfig.document
+    submission <- applyEnv serverConfig.submission
     externalLink <- applyEnv serverConfig.externalLink
     knowledgeModelEditor <- applyEnv serverConfig.knowledgeModelEditor
     project <- applyEnv serverConfig.project
@@ -31,6 +32,15 @@ instance FromEnv ServerConfig where
     httpClient <- applyEnv serverConfig.httpClient
     mcp <- applyEnv serverConfig.mcp
     return ServerConfig {..}
+
+instance FromEnv ServerConfigSubmission where
+  applyEnv serverConfig =
+    applyEnvVariables
+      serverConfig
+      [ \c -> applyEnvVariable "SUBMISSION_TIMEOUT_IN_MINUTES" c.timeoutInMinutes (\x -> c {timeoutInMinutes = x})
+      , \c -> applyEnvVariable "SUBMISSION_TIMEOUT_JOB_ENABLED" c.timeoutJob.enabled (\x -> c {timeoutJob = c.timeoutJob {enabled = x}} :: ServerConfigSubmission)
+      , \c -> applyStringEnvVariable "SUBMISSION_TIMEOUT_JOB_CRON" c.timeoutJob.cron (\x -> c {timeoutJob = c.timeoutJob {cron = x}} :: ServerConfigSubmission)
+      ]
 
 instance FromEnv ServerConfigMcp where
   applyEnv serverConfig =

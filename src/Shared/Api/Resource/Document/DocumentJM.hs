@@ -6,7 +6,6 @@ import Shared.Api.Resource.Document.DocumentDTO
 import Shared.Api.Resource.DocumentTemplate.DocumentTemplateFormatSimpleJM ()
 import Shared.Api.Resource.DocumentTemplate.DocumentTemplateWithCoordinateJM ()
 import Shared.Api.Resource.Project.ProjectSimpleJM ()
-import Shared.Api.Resource.Submission.SubmissionJM ()
 import Shared.Model.Document.Document
 import Shared.Util.Aeson
 import Shared.Util.JsonSchema

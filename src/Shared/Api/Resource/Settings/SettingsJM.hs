@@ -237,12 +237,3 @@ instance ToJSON ProjectCreation
 
 instance JsonSchema ProjectCreation where
   jsonSchema = genericJsonSchema defaultOptions
-
-instance FromJSON SettingsSubmissionDefinitionSimple where
-  parseJSON = genericParseJSON jsonOptions
-
-instance ToJSON SettingsSubmissionDefinitionSimple where
-  toJSON = genericToJSON jsonOptions
-
-instance JsonSchema SettingsSubmissionDefinitionSimple where
-  jsonSchema = genericJsonSchema jsonOptions

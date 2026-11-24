@@ -182,10 +182,3 @@ data SettingsSubmissionServiceRequestMultipart = SettingsSubmissionServiceReques
   , fileName :: String
   }
   deriving (Generic, Eq, Show)
-
-data SettingsSubmissionDefinitionSimple = SettingsSubmissionDefinitionSimple
-  { sId :: String
-  , name :: String
-  , description :: String
-  }
-  deriving (Generic, Eq, Show)

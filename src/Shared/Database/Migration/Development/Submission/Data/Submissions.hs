@@ -4,11 +4,17 @@ import Data.Maybe (fromJust)
 import Data.Time
 
 import Shared.Api.Resource.Submission.SubmissionCreateDTO
+import Shared.Api.Resource.Submission.SubmissionDefinitionDTO
+import Shared.Database.Migration.Development.DocumentTemplate.Data.DocumentTemplateFormats
+import Shared.Database.Migration.Development.DocumentTemplate.Data.DocumentTemplates
 import Shared.Database.Migration.Development.Document.Data.Documents
+import Shared.Database.Migration.Development.Project.Data.Projects
 import Shared.Database.Migration.Development.Settings.Data.Settings
 import Shared.Database.Migration.Development.Tenant.Data.WizardTenants
 import Shared.Database.Migration.Development.User.Data.WizardUsers
 import Shared.Model.Document.Document
+import Shared.Model.DocumentTemplate.DocumentTemplate
+import Shared.Model.Project.Project
 import Shared.Model.Settings.Settings
 import Shared.Model.Submission.Submission
 import Shared.Model.Submission.SubmissionList
@@ -18,7 +24,26 @@ import Shared.Service.Submission.SubmissionMapper
 import Shared.Util.Uuid
 
 submissionCreate :: SubmissionCreateDTO
-submissionCreate = SubmissionCreateDTO {serviceId = settingsSubmissionDefinition.sId}
+submissionCreate = SubmissionCreateDTO {definitionId = settingsSubmissionDefinition.sId}
+
+settingsSubmissionDefinitionDto :: SubmissionDefinitionDTO
+settingsSubmissionDefinitionDto =
+  SubmissionDefinitionDTO
+    { sId = settingsSubmissionDefinition.sId
+    , name = settingsSubmissionDefinition.name
+    , description = settingsSubmissionDefinition.description
+    , targetType = "HttpSubmissionTarget"
+    , exports =
+        [ SubmissionDefinitionExportDTO
+            { documentTemplateUuid = wizardDocumentTemplate.uuid
+            , documentTemplateName = wizardDocumentTemplate.name
+            , documentTemplateId = wizardDocumentTemplate.id
+            , documentTemplateVersion = wizardDocumentTemplate.version
+            , formatUuid = formatJson.uuid
+            , formatName = formatJson.name
+            }
+        ]
+    }
 
 submission1 :: Submission
 submission1 =
@@ -27,34 +52,21 @@ submission1 =
     , state = DoneSubmissionState
     , location = Nothing
     , returnedData = Nothing
-    , serviceId = settingsSubmissionDefinition.sId
-    , documentUuid = doc1.uuid
+    , definitionId = settingsSubmissionDefinition.sId
+    , projectUuid = project1.uuid
+    , externalId = Nothing
+    , targetBaseUrl = Nothing
     , tenantUuid = defaultTenant.uuid
     , createdBy = Just userAlbert.uuid
     , createdAt = UTCTime (fromJust $ fromGregorianValid 2018 1 20) 0
     , updatedAt = UTCTime (fromJust $ fromGregorianValid 2018 1 20) 0
     }
+
+submission1Documents :: [SubmissionDocument]
+submission1Documents = [SubmissionDocument {submissionUuid = submission1.uuid, documentUuid = doc1.uuid, position = 0, tenantUuid = defaultTenant.uuid}]
 
 submission1List :: SubmissionList
-submission1List = toList submission1 settingsSubmissionDefinition (Just userAlbertSuggestion)
-
-submission2 :: Submission
-submission2 =
-  Submission
-    { uuid = u' "bca23893-1d44-4980-a3ba-b50c6b8df342"
-    , state = DoneSubmissionState
-    , location = Nothing
-    , returnedData = Nothing
-    , serviceId = settingsSubmissionDefinition.sId
-    , documentUuid = doc1.uuid
-    , tenantUuid = defaultTenant.uuid
-    , createdBy = Just userAlbert.uuid
-    , createdAt = UTCTime (fromJust $ fromGregorianValid 2018 1 20) 0
-    , updatedAt = UTCTime (fromJust $ fromGregorianValid 2018 1 20) 0
-    }
-
-submission2Dto :: SubmissionList
-submission2Dto = toList submission2 settingsSubmissionDefinition (Just userAlbertSuggestion)
+submission1List = toList submission1 (Just settingsSubmissionDefinition) [doc1] (Just userAlbertSuggestion)
 
 differentSubmission1 :: Submission
 differentSubmission1 =
@@ -63,10 +75,15 @@ differentSubmission1 =
     , state = DoneSubmissionState
     , location = Nothing
     , returnedData = Nothing
-    , serviceId = settingsSubmissionDefinition.sId
-    , documentUuid = differentDoc.uuid
+    , definitionId = settingsSubmissionDefinition.sId
+    , projectUuid = differentProject.uuid
+    , externalId = Nothing
+    , targetBaseUrl = Nothing
     , tenantUuid = differentTenant.uuid
     , createdBy = Just userCharles.uuid
     , createdAt = UTCTime (fromJust $ fromGregorianValid 2018 1 20) 0
     , updatedAt = UTCTime (fromJust $ fromGregorianValid 2018 1 20) 0
     }
+
+differentSubmission1Documents :: [SubmissionDocument]
+differentSubmission1Documents = [SubmissionDocument {submissionUuid = differentSubmission1.uuid, documentUuid = differentDoc.uuid, position = 0, tenantUuid = differentTenant.uuid}]

@@ -116,6 +116,3 @@ instance ToSchema SettingsSubmissionServiceRequestMultipart where
 instance ToSchema SettingsAnnouncementLevelType
 
 instance ToSchema ProjectCreation
-
-instance ToSchema SettingsSubmissionDefinitionSimple where
-  declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)

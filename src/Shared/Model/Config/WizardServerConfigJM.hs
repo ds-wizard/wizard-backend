@@ -26,6 +26,7 @@ instance FromJSON ServerConfig where
     knowledgeModelEditor <- o .:? "knowledgeModelEditor" .!= defaultKnowledgeModelEditor
     cache <- o .:? "cache" .!= defaultCache
     document <- o .:? "document" .!= defaultDocument
+    submission <- o .:? "submission" .!= defaultSubmission
     externalLink <- o .:? "externalLink" .!= defaultExternalLink
     project <- o .:? "project" .!= defaultProject
     temporaryFile <- o .:? "temporaryFile" .!= defaultTemporaryFile
@@ -105,6 +106,13 @@ instance FromJSON ServerConfigDocument where
   parseJSON (Object o) = do
     clean <- o .:? "clean" .!= defaultDocument.clean
     return ServerConfigDocument {..}
+  parseJSON _ = mzero
+
+instance FromJSON ServerConfigSubmission where
+  parseJSON (Object o) = do
+    timeoutInMinutes <- o .:? "timeoutInMinutes" .!= defaultSubmission.timeoutInMinutes
+    timeoutJob <- o .:? "timeoutJob" .!= defaultSubmission.timeoutJob
+    return ServerConfigSubmission {..}
   parseJSON _ = mzero
 
 instance FromJSON ServerConfigProject where

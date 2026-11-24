@@ -17,6 +17,7 @@ data ServerConfig = ServerConfig
   , auditLog :: ServerConfigAuditLog
   , cache :: ServerConfigCache
   , document :: ServerConfigDocument
+  , submission :: ServerConfigSubmission
   , externalLink :: ServerConfigExternalLink
   , knowledgeModelEditor :: ServerConfigKnowledgeModelEditor
   , project :: ServerConfigProject
@@ -71,6 +72,12 @@ data ServerConfigCache = ServerConfigCache
 
 data ServerConfigDocument = ServerConfigDocument
   { clean :: ServerConfigCronWorker
+  }
+  deriving (Generic, Show)
+
+data ServerConfigSubmission = ServerConfigSubmission
+  { timeoutInMinutes :: Int
+  , timeoutJob :: ServerConfigCronWorker
   }
   deriving (Generic, Show)
 

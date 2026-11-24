@@ -17,6 +17,7 @@ import Shared.Database.Migration.Development.Project.Data.Projects
 import qualified Shared.Database.Migration.Development.Project.ProjectMigration as Project
 import qualified Shared.Database.Migration.Development.User.UserMigration as User
 import Shared.Model.Document.Document
+import Shared.Model.Project.Project
 import WizardServer.Model.Context.RequestContext
 
 import SharedTest.Specs.Api.Mcp
@@ -35,6 +36,9 @@ runDocumentMigrations requestContext = do
 
 documentArguments :: [(K.Key, Value)] -> Value
 documentArguments arguments = object (("document_uuid" .= doc1.uuid) : arguments)
+
+projectArguments :: [(K.Key, Value)] -> Value
+projectArguments arguments = object (("project_uuid" .= project1.uuid) : arguments)
 
 documentUuidsOf :: SResponse -> [Maybe Value]
 documentUuidsOf response =

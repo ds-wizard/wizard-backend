@@ -3,6 +3,8 @@ module Specs.Api.Handler.Submission.List_GET (
 ) where
 
 import Data.Aeson (encode)
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.UUID as U
 import Network.HTTP.Types
 import Network.Wai (Application)
 import Test.Hspec
@@ -11,9 +13,7 @@ import Test.Hspec.Wai.Matcher
 
 import Shared.Api.Resource.Error.ErrorJM ()
 import Shared.Api.Resource.Submission.SubmissionJM ()
-import Shared.Database.DAO.Document.DocumentDAO
 import Shared.Database.DAO.Project.ProjectDAO
-import Shared.Database.Migration.Development.Document.Data.Documents
 import qualified Shared.Database.Migration.Development.Document.DocumentMigration as DOC_Migration
 import qualified Shared.Database.Migration.Development.DocumentTemplate.DocumentTemplateMigration as TML_Migration
 import Shared.Database.Migration.Development.Project.Data.Projects
@@ -22,7 +22,6 @@ import Shared.Database.Migration.Development.Submission.Data.Submissions
 import qualified Shared.Database.Migration.Development.Submission.SubmissionMigration as SUB_Migration
 import qualified Shared.Database.Migration.Development.User.UserMigration as U_Migration
 import Shared.Localization.Messages.Public
-import Shared.Model.Document.Document
 import Shared.Model.Error.Error
 import Shared.Model.Project.Project
 import WizardServer.Model.Context.RequestContext
@@ -32,11 +31,11 @@ import Specs.Api.Handler.Common
 import Specs.Common
 
 -- ------------------------------------------------------------------------
--- GET /api/documents/{docUuid}/submissions
+-- GET /api/projects/{projectUuid}/submissions
 -- ------------------------------------------------------------------------
 list_GET :: RequestContext -> SpecWith ((), Application)
 list_GET requestContext =
-  describe "GET /api/documents/{docUuid}/submissions" $ do
+  describe "GET /api/projects/{projectUuid}/submissions" $ do
     test_200 requestContext
     test_401 requestContext
     test_403 requestContext
@@ -46,7 +45,9 @@ list_GET requestContext =
 -- ----------------------------------------------------
 reqMethod = methodGet
 
-reqUrl = "/api/documents/264ca352-1a99-4ffd-860e-32aee9a98428/submissions"
+reqUrlT project = BS.pack $ "/api/projects/" ++ U.toString project.uuid ++ "/submissions"
+
+reqUrl = reqUrlT project1
 
 reqHeadersT authHeader = reqCtHeader : authHeader
 
@@ -56,11 +57,10 @@ reqBody = ""
 -- ----------------------------------------------------
 -- ----------------------------------------------------
 test_200 requestContext = do
-  create_test_200 "HTTP 200 OK (Owner, Private)" requestContext project1 [reqAuthHeader]
-  create_test_200 "HTTP 200 OK (Non-Owner, VisibleEdit)" requestContext project3 [reqNonAdminAuthHeader]
-  create_test_200 "HTTP 200 OK (Non-Owner, VisibleView)" requestContext project2 [reqNonAdminAuthHeader]
+  create_test_200 "HTTP 200 OK (Owner, Private)" requestContext project1 [reqAuthHeader] [submission1List]
+  create_test_200 "HTTP 200 OK (Non-Owner, VisibleView, no submissions)" requestContext project2 [reqNonAdminAuthHeader] []
 
-create_test_200 title requestContext project authHeader =
+create_test_200 title requestContext project authHeader expDto =
   it title $
     -- GIVEN: Prepare request
     do
@@ -68,7 +68,6 @@ create_test_200 title requestContext project authHeader =
       -- AND: Prepare expectation
       let expStatus = 200
       let expHeaders = resCtHeader : resCorsHeaders
-      let expDto = [submission1List]
       let expBody = encode expDto
       -- AND: Run migrations
       runInContextIO U_Migration.runMigration requestContext
@@ -76,11 +75,9 @@ create_test_200 title requestContext project authHeader =
       runInContextIO PRJ_Migration.runMigration requestContext
       runInContextIO (insertProject project10) requestContext
       runInContextIO DOC_Migration.runMigration requestContext
-      runInContextIO (deleteDocumentByUuid doc1.uuid) requestContext
-      runInContextIO (insertDocument (doc1 {projectUuid = Just project.uuid})) requestContext
       runInContextIO SUB_Migration.runMigration requestContext
       -- WHEN: Call API
-      response <- request reqMethod reqUrl reqHeaders reqBody
+      response <- request reqMethod (reqUrlT project) reqHeaders reqBody
       -- THEN: Compare response with expectation
       let responseMatcher =
             ResponseMatcher {matchHeaders = expHeaders, matchStatus = expStatus, matchBody = bodyEquals expBody}
@@ -118,10 +115,8 @@ create_test_403 title requestContext project authHeader errorMessage =
       runInContextIO PRJ_Migration.runMigration requestContext
       runInContextIO (insertProject project7) requestContext
       runInContextIO DOC_Migration.runMigration requestContext
-      runInContextIO (deleteDocumentByUuid doc1.uuid) requestContext
-      runInContextIO (insertDocument (doc1 {projectUuid = Just project.uuid})) requestContext
       -- WHEN: Call API
-      response <- request reqMethod reqUrl reqHeaders reqBody
+      response <- request reqMethod (reqUrlT project) reqHeaders reqBody
       -- THEN: Compare response with expectation
       let responseMatcher =
             ResponseMatcher {matchHeaders = expHeaders, matchStatus = expStatus, matchBody = bodyEquals expBody}

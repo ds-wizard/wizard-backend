@@ -247,6 +247,7 @@ deleteAllEntitiesSql =
     , "telemetry_event"
     , "prefab"
     , "persistent_command"
+    , "submission_document"
     , "submission"
     , "config_mail"
     , "settings_features"
