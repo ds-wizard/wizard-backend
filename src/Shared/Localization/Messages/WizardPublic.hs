@@ -109,6 +109,9 @@ _ERROR_SERVICE_DOCUMENT__PROJECT_OR_FORMAT_NOT_SET_UP =
 _ERROR_SERVICE_SUBMISSION__DEFINITION_NOT_AVAILABLE definitionId =
   LocaleRecord "error.service.submission.definition_not_available" "Submission '%s' is not available for this project" [definitionId]
 
+_ERROR_SERVICE_SUBMISSION__ZENODO_NOT_CONNECTED baseUrl =
+  LocaleRecord "error.service.submission.zenodo_not_connected" "Connect your Zenodo account (%s) in your profile first" [baseUrl]
+
 -- Zenodo
 _ERROR_SERVICE_ZENODO__REPOSITORY_NOT_AVAILABLE repository =
   LocaleRecord "error.service.zenodo.repository_not_available" "Zenodo repository '%s' is not configured" [repository]

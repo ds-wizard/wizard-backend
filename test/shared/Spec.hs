@@ -129,6 +129,7 @@ import Specs.Service.Project.ProjectAclSpec
 import Specs.Service.Project.ProjectServiceSpec
 import Specs.Service.Submission.SubmissionServiceSpec
 import Specs.Service.Zenodo.ZenodoAuthServiceSpec
+import Specs.Service.Zenodo.ZenodoMetadataMapperSpec
 import Specs.Service.Project.ProjectValidationSpec
 import Specs.Service.Registry.Synchronization.RegistrySynchronizationServiceSpec
 import Specs.Service.Report.ReportGeneratorSpec
@@ -238,6 +239,7 @@ main =
             describe "API" $ do
               apiSpec
               coordinateJMSpec
+            describe "SERVICE" $ zenodoMetadataMapperSpec
             describe "DATABASE" $ do
               daoCommonSpec
               permissionMappingSpec

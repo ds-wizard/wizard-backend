@@ -1,11 +1,11 @@
 module Shared.Service.Submission.SubmissionService where
 
-import Control.Monad (forM, forM_)
+import Control.Monad (forM, forM_, unless, when)
 import Control.Monad.Except (throwError)
 import Control.Monad.Reader (asks, liftIO)
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
-import Data.Maybe (catMaybes, listToMaybe)
+import Data.Maybe (catMaybes, isNothing, listToMaybe)
 import Data.Time
 import qualified Data.UUID as U
 
@@ -21,6 +21,7 @@ import Shared.Database.DAO.PersistentCommand.PersistentCommandDAO
 import Shared.Database.DAO.Project.ProjectDAO
 import Shared.Database.DAO.Submission.SubmissionDAO
 import Shared.Database.DAO.WizardCommon
+import Shared.Database.DAO.Zenodo.UserZenodoCredentialDAO
 import Shared.Integration.Http.Submission.Runner
 import Shared.Localization.Messages.Public
 import Shared.Localization.Messages.WizardPublic
@@ -40,6 +41,7 @@ import Shared.Model.Submission.Submission
 import Shared.Model.Submission.SubmissionList
 import Shared.Model.Submission.SubmissionResult
 import Shared.Model.User.UserSubmissionPropList
+import Shared.Model.Zenodo.ZenodoRepository
 import Shared.S3.Document.DocumentS3
 import Shared.Service.Automation.AutomationHookService
 import Shared.Service.Common
@@ -50,10 +52,12 @@ import Shared.Service.Document.DocumentService
 import Shared.Service.Document.DocumentUtil
 import Shared.Service.DocumentTemplate.WizardDocumentTemplateUtil
 import Shared.Service.PersistentCommand.PersistentCommandMapper
+import Shared.Service.Settings.OrganizationSettingsService (getCurrentSettingsZenodo)
 import Shared.Service.Settings.SettingsSubmissionUtil
 import Shared.Service.Settings.WorkspaceSettingsService
 import Shared.Service.Submission.SubmissionMapper
 import Shared.Service.User.Profile.UserProfileService
+import Shared.Service.Zenodo.ZenodoSubmitter
 import Shared.Util.JSON
 import Shared.Util.Uuid
 
@@ -71,7 +75,12 @@ getAvailableSubmissions projectUuid = do
   checkEditPermissionToDoc (Just project.uuid)
   settings <- getEffectiveSettingsSubmission (Just project.workspaceUuid)
   usableTemplates <- findUsableTemplates project
-  definitions <- forM settings.definitions $ \definition -> do
+  zenodoRepositories <- availableZenodoRepositories <$> getCurrentSettingsZenodo
+  let isTargetAvailable definition =
+        case definition.target of
+          ZenodoSubmissionTarget {repository = repository} -> repository `elem` zenodoRepositories
+          HttpSubmissionTarget {} -> True
+  definitions <- forM (filter isTargetAvailable settings.definitions) $ \definition -> do
     mExports <- resolveExports usableTemplates definition
     return $ fmap (toDefinitionDTO definition) mExports
   return . catMaybes $ definitions
@@ -107,6 +116,7 @@ createSubmission projectUuid reqDto =
     usableTemplates <- findUsableTemplates project
     exports <- resolveExports usableTemplates definition >>= maybe notAvailable return
     _ <- checkAutomationHook (ProjectSubmitHook project definition.sId)
+    checkTargetPrerequisites definition
     (ctx, mCutOffEventUuid) <- createProjectDocumentContext project Nothing
     existingDocuments <-
       findDocumentsForCurrentTenantFiltered
@@ -150,6 +160,18 @@ finishSubmission submissionUuid = do
 -- --------------------------------
 checkIfSubmissionIsEnabled :: WizardRequestContextC s m => U.UUID -> m ()
 checkIfSubmissionIsEnabled workspaceUuid = checkIfTenantFeatureIsEnabled "Submission" (getEffectiveSettingsSubmission (Just workspaceUuid)) (.enabled)
+
+-- A Zenodo target needs a configured repository and the account of the user connected to it
+checkTargetPrerequisites :: WizardRequestContextC s m => SettingsSubmissionDefinition -> m ()
+checkTargetPrerequisites definition =
+  case definition.target of
+    HttpSubmissionTarget {} -> return ()
+    ZenodoSubmissionTarget {repository = repository} -> do
+      zenodoRepositories <- availableZenodoRepositories <$> getCurrentSettingsZenodo
+      unless (repository `elem` zenodoRepositories) (throwError . UserError $ _ERROR_SERVICE_SUBMISSION__DEFINITION_NOT_AVAILABLE definition.sId)
+      currentUser <- getCurrentUser
+      mCredential <- findUserZenodoCredential currentUser.uuid repository
+      when (isNothing mCredential) (throwError . UserError $ _ERROR_SERVICE_SUBMISSION__ZENODO_NOT_CONNECTED (zenodoBaseUrl repository))
 
 findUsableTemplates :: WizardRequestContextC s m => Project -> m [DocumentTemplate]
 findUsableTemplates project = do
@@ -210,7 +232,12 @@ sendSubmission submission documents = do
       result <-
         case definition.target of
           HttpSubmissionTarget {request = request} -> submitToHttpTarget definition request documents
-          ZenodoSubmissionTarget {} -> return (Left "Submitting to Zenodo is not supported yet")
+          ZenodoSubmissionTarget {repository = repository, resourceType = resourceType, licenseId = licenseId, accessLevel = accessLevel, community = community} ->
+            submitToZenodo
+              submission
+              ZenodoTarget {repository = repository, resourceType = resourceType, licenseId = licenseId, accessLevel = accessLevel, community = community}
+              project
+              (zip documents (fmap (.madmpMetadata) definition.exports ++ repeat False))
       case result of
         Right SubmissionResult {..} -> do
           let updated = submission {state = DoneSubmissionState, location = location, returnedData = returnedData, externalId = externalId, targetBaseUrl = targetBaseUrl} :: Submission

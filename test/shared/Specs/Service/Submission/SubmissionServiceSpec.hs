@@ -5,7 +5,17 @@ import Database.PostgreSQL.Simple (execute)
 import Test.Hspec hiding (shouldBe)
 import Test.Hspec.Expectations.Pretty
 
+import Shared.Api.Resource.Submission.SubmissionCreateDTO
+import Shared.Constant.Tenant
 import Shared.Database.DAO.Common (runDB)
+import Shared.Database.DAO.Settings.SettingsSubmissionDAO
+import Shared.Database.Migration.Development.Project.Data.Projects
+import Shared.Database.Migration.Development.Settings.Data.Settings
+import Shared.Localization.Messages.WizardPublic
+import Shared.Model.Error.Error
+import Shared.Model.Project.Project
+import Shared.Model.Settings.Settings
+import Shared.Service.Settings.OrganizationSettingsService
 import Shared.Database.DAO.Document.DocumentDAO
 import Shared.Database.DAO.PersistentCommand.PersistentCommandDAO
 import Shared.Database.DAO.Submission.SubmissionDAO
@@ -50,6 +60,13 @@ submissionServiceSpec requestContext =
         runInContext' (finishSubmission inProgressSubmission.uuid) requestContext
         submission <- findSubmission requestContext
         submission.state `shouldBe` DoneSubmissionState
+    describe "createSubmission" $
+      it "refuses a Zenodo submission when the account of the user is not connected" $ do
+        prepare requestContext [doc1]
+        runInContext' (saveEncryptedSettingsZenodo defaultTenantUuid settingsZenodo) requestContext
+        runInContext' (saveSettingsSubmission defaultTenantUuid Nothing (settingsSubmission {definitions = [settingsSubmissionZenodoDefinition]})) requestContext
+        result <- runInContext (createSubmission project1.uuid (SubmissionCreateDTO settingsSubmissionZenodoDefinition.sId)) requestContext
+        result `shouldBe` Left (UserError (_ERROR_SERVICE_SUBMISSION__ZENODO_NOT_CONNECTED "https://sandbox.zenodo.org"))
     describe "document trigger" $
       it "creates a submission command when a document of a submission in progress is finished" $ do
         prepare requestContext [doc6]
