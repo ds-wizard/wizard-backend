@@ -12,6 +12,7 @@ import Test.Hspec.Wai hiding (shouldRespondWith)
 import Test.Hspec.Wai.Matcher
 
 import Shared.Api.Resource.Error.ErrorJM ()
+import Shared.Api.Resource.Submission.SubmissionCreateDTO
 import Shared.Api.Resource.Submission.SubmissionCreateJM ()
 import Shared.Api.Resource.Submission.SubmissionJM ()
 import Shared.Database.DAO.Project.ProjectDAO
@@ -112,7 +113,7 @@ test_400 requestContext =
     -- GIVEN: Prepare request
     do
       let reqHeaders = reqHeadersT [reqAuthHeader]
-      let reqBody = encode (submissionCreate {definitionId = "otherSubmission"})
+      let reqBody = encode (SubmissionCreateDTO {definitionId = "otherSubmission"})
       -- AND: Prepare expectation
       let expStatus = 400
       let expHeaders = resCtHeader : resCorsHeaders

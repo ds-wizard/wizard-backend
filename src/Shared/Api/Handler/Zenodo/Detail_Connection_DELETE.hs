@@ -1,6 +1,5 @@
 module Shared.Api.Handler.Zenodo.Detail_Connection_DELETE where
 
-import Control.Monad.Except (throwError)
 import Servant
 
 import Shared.Api.Handler.Common

@@ -31,6 +31,7 @@ import Shared.Model.Context.RequestContextHelpers
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Coordinate.Coordinate
 import Shared.Model.Document.Document
+import Shared.Model.Document.DocumentContext
 import Shared.Model.DocumentTemplate.DocumentTemplate
 import Shared.Model.DocumentTemplate.DocumentTemplateFormatSimple
 import Shared.Model.Error.Error
@@ -111,10 +112,9 @@ createSubmission projectUuid reqDto =
     checkIfSubmissionIsEnabled project.workspaceUuid
     checkEditPermissionToDoc (Just project.uuid)
     settings <- getEffectiveSettingsSubmission (Just project.workspaceUuid)
-    let notAvailable = throwError . UserError $ _ERROR_SERVICE_SUBMISSION__DEFINITION_NOT_AVAILABLE reqDto.definitionId
-    definition <- maybe notAvailable return (findDefinition reqDto.definitionId settings)
+    definition <- maybe (notAvailable reqDto.definitionId) return (findDefinition reqDto.definitionId settings)
     usableTemplates <- findUsableTemplates project
-    exports <- resolveExports usableTemplates definition >>= maybe notAvailable return
+    exports <- resolveExports usableTemplates definition >>= maybe (notAvailable reqDto.definitionId) return
     _ <- checkAutomationHook (ProjectSubmitHook project definition.sId)
     checkTargetPrerequisites definition
     (ctx, mCutOffEventUuid) <- createProjectDocumentContext project Nothing
@@ -158,6 +158,9 @@ finishSubmission submissionUuid = do
 -- --------------------------------
 -- PRIVATE
 -- --------------------------------
+notAvailable :: WizardRequestContextC s m => String -> m a
+notAvailable definitionId = throwError . UserError $ _ERROR_SERVICE_SUBMISSION__DEFINITION_NOT_AVAILABLE definitionId
+
 checkIfSubmissionIsEnabled :: WizardRequestContextC s m => U.UUID -> m ()
 checkIfSubmissionIsEnabled workspaceUuid = checkIfTenantFeatureIsEnabled "Submission" (getEffectiveSettingsSubmission (Just workspaceUuid)) (.enabled)
 

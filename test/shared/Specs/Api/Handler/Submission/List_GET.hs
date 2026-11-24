@@ -24,6 +24,7 @@ import qualified Shared.Database.Migration.Development.User.UserMigration as U_M
 import Shared.Localization.Messages.Public
 import Shared.Model.Error.Error
 import Shared.Model.Project.Project
+import Shared.Model.Submission.SubmissionList
 import WizardServer.Model.Context.RequestContext
 
 import SharedTest.Specs.Api.Common
@@ -58,7 +59,7 @@ reqBody = ""
 -- ----------------------------------------------------
 test_200 requestContext = do
   create_test_200 "HTTP 200 OK (Owner, Private)" requestContext project1 [reqAuthHeader] [submission1List]
-  create_test_200 "HTTP 200 OK (Non-Owner, VisibleView, no submissions)" requestContext project2 [reqNonAdminAuthHeader] []
+  create_test_200 "HTTP 200 OK (Non-Owner, VisibleView, no submissions)" requestContext project2 [reqNonAdminAuthHeader] ([] :: [SubmissionList])
 
 create_test_200 title requestContext project authHeader expDto =
   it title $

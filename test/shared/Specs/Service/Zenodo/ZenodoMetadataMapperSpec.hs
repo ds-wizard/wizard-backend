@@ -4,8 +4,8 @@ import Data.Aeson
 import qualified Data.Aeson.Key as K
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import Data.Maybe (fromJust, isJust)
-import Test.Hspec hiding (shouldBe, shouldNotBe)
+import Data.Maybe (fromJust, fromMaybe, isJust)
+import Test.Hspec hiding (expectationFailure, shouldBe, shouldNotBe)
 import Test.Hspec.Expectations.Pretty
 
 import Shared.Service.Zenodo.ZenodoMetadataMapper
@@ -88,7 +88,7 @@ defaults =
 
 at :: [String] -> Value -> Value
 at [] value = value
-at (key : keys) (Object o) = at keys (KM.findWithDefault Null (K.fromString key) o)
+at (key : keys) (Object o) = at keys (fromMaybe Null (KM.lookup (K.fromString key) o))
 at _ _ = Null
 
 hasKey :: [String] -> String -> Value -> Bool
@@ -97,10 +97,10 @@ hasKey path key value =
     Object o -> KM.member (K.fromString key) o
     _ -> False
 
-person :: String -> String -> [Pair] -> Value
+person :: String -> String -> [(Key, Value)] -> Value
 person familyName givenName extra = object (["type" .= ("personal" :: String), "family_name" .= familyName, "given_name" .= givenName] ++ extra)
 
-orcidIdentifiers :: [Pair]
+orcidIdentifiers :: [(Key, Value)]
 orcidIdentifiers = ["identifiers" .= [object ["scheme" .= ("orcid" :: String), "identifier" .= validOrcid]]]
 
 zenodoMetadataMapperSpec =
