@@ -8,7 +8,7 @@ import Shared.Model.Submission.Submission
 import Shared.Model.Submission.SubmissionList
 import Shared.Model.User.UserSuggestion
 
-toList :: Submission -> SettingsSubmissionService -> Maybe UserSuggestion -> SubmissionList
+toList :: Submission -> SettingsSubmissionDefinition -> Maybe UserSuggestion -> SubmissionList
 toList Submission {..} service createdBy2 =
   let serviceName = Just service.name
       createdBy = createdBy2

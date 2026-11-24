@@ -33,6 +33,7 @@ import Shared.Service.Automation.AutomationHookService
 import Shared.Service.Common
 import Shared.Service.Document.DocumentAcl
 import Shared.Service.Document.DocumentAuditLog
+import Shared.Service.Settings.SettingsSubmissionUtil
 import Shared.Service.Settings.WorkspaceSettingsService
 import Shared.Service.Submission.SubmissionAcl
 import Shared.Service.Submission.SubmissionMapper
@@ -40,12 +41,12 @@ import Shared.Service.User.Profile.UserProfileService
 import Shared.Service.User.WizardUserMapper (toSuggestion')
 import Shared.Util.Uuid
 
-getAvailableServicesForSubmission :: WizardRequestContextC s m => U.UUID -> m [SettingsSubmissionServiceSimple]
+getAvailableServicesForSubmission :: WizardRequestContextC s m => U.UUID -> m [SettingsSubmissionDefinitionSimple]
 getAvailableServicesForSubmission docUuid = do
   doc <- findDocumentByUuid docUuid
   checkIfSubmissionIsEnabled doc
   checkEditPermissionToSubmission doc
-  fmap toSubmissionServiceSimple <$> findServicesForDocument doc
+  fmap (toSubmissionDefinitionSimple . fst) <$> findServicesForDocument doc
 
 getSubmissionsForDocument :: WizardRequestContextC s m => U.UUID -> m [SubmissionList]
 getSubmissionsForDocument docUuid = do
@@ -61,12 +62,12 @@ submitDocument docUuid reqDto =
     checkIfSubmissionIsEnabled doc
     checkEditPermissionToSubmission doc
     services <- findServicesForDocument doc
-    service <- maybe (throwError . NotExistsError $ _ERROR_VALIDATION__ABSENCE "submission service") return (L.find (\s -> s.sId == reqDto.serviceId) services)
+    (service, request) <- maybe (throwError . NotExistsError $ _ERROR_VALIDATION__ABSENCE "submission service") return (L.find (\(s, _) -> s.sId == reqDto.serviceId) services)
     _ <- checkAutomationHook (DocumentSubmitHook doc service.sId)
     docContent <- retrieveDocumentContent docUuid
     userProps <- getUserProps service
     sub <- createSubmission docUuid reqDto
-    response <- uploadDocument service.request userProps docContent
+    response <- uploadDocument request userProps docContent
     let updatedSub =
           case response of
             Right mLocation -> sub {state = DoneSubmissionState, location = mLocation} :: Submission
@@ -94,16 +95,16 @@ submitDocument docUuid reqDto =
 checkIfSubmissionIsEnabled :: WizardRequestContextC s m => Document -> m ()
 checkIfSubmissionIsEnabled doc = checkIfTenantFeatureIsEnabled "Submission" (getEffectiveSettingsSubmission (Just doc.workspaceUuid)) (.enabled)
 
-findServicesForDocument :: WizardRequestContextC s m => Document -> m [SettingsSubmissionService]
+findServicesForDocument :: WizardRequestContextC s m => Document -> m [(SettingsSubmissionDefinition, SettingsSubmissionServiceRequest)]
 findServicesForDocument doc = do
   settings <- getEffectiveSettingsSubmission (Just doc.workspaceUuid)
   template <- findDocumentTemplateByUuid doc.documentTemplateUuid
   format <- findDocumentTemplateFormatByDocumentTemplateIdAndUuid doc.documentTemplateUuid doc.formatUuid
-  let supported f = f.id == template.id && f.version == template.version && f.formatName == format.name
-  return $ filter (any supported . (.supportedFormats)) settings.services
+  let supported definition = any (isExportOf template.id template.version format.name) definition.exports
+  return [(definition, request) | definition <- settings.definitions, supported definition, Just request <- [definitionRequest definition]]
 
-toSubmissionServiceSimple :: SettingsSubmissionService -> SettingsSubmissionServiceSimple
-toSubmissionServiceSimple service = SettingsSubmissionServiceSimple {sId = service.sId, name = service.name, description = service.description}
+toSubmissionDefinitionSimple :: SettingsSubmissionDefinition -> SettingsSubmissionDefinitionSimple
+toSubmissionDefinitionSimple definition = SettingsSubmissionDefinitionSimple {sId = definition.sId, name = definition.name, description = definition.description}
 
 createSubmission :: WizardRequestContextC s m => U.UUID -> SubmissionCreateDTO -> m Submission
 createSubmission docUuid reqDto = do

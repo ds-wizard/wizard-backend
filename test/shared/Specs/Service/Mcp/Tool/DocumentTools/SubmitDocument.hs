@@ -44,7 +44,7 @@ reqUrl = "/api/mcp"
 
 reqHeaders = [reqAuthHeader, reqCtHeader]
 
-reqArguments = documentArguments ["service_id" .= settingsSubmissionService.sId]
+reqArguments = documentArguments ["service_id" .= settingsSubmissionDefinition.sId]
 
 reqBody = toolCallBody "submit_document" reqArguments
 
@@ -59,7 +59,7 @@ test_200 requestContext = do
       let expHeaders = resCtHeader : resCorsHeaders
       -- AND: Run migrations
       runDocumentMigrations requestContext
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation
@@ -67,7 +67,7 @@ test_200 requestContext = do
             ResponseMatcher {matchHeaders = expHeaders, matchStatus = expStatus, matchBody = MatchBody (\_ _ -> Nothing)}
       response `shouldRespondWith` responseMatcher
       let Just structuredContent = structuredContentOf response
-      liftIO $ fmap (L.isInfixOf settingsSubmissionService.name) (stringField "summary" structuredContent) `shouldBe` Just True
+      liftIO $ fmap (L.isInfixOf settingsSubmissionDefinition.name) (stringField "summary" structuredContent) `shouldBe` Just True
       liftIO $ isJust (stringField "confirmation_token" structuredContent) `shouldBe` True
       assertToolOutputSchema reqHeaders "submit_document" structuredContent
       -- AND: Compare state in DB with expectation
@@ -79,9 +79,9 @@ test_200 requestContext = do
       let expHeaders = resCtHeader : resCorsHeaders
       -- AND: Run migrations
       runDocumentMigrations requestContext
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       Just token <- confirmationTokenOf <$> request reqMethod reqUrl reqHeaders reqBody
-      let reqBody = toolCallBody "submit_document" (documentArguments ["service_id" .= settingsSubmissionService.sId, "confirmation_token" .= token])
+      let reqBody = toolCallBody "submit_document" (documentArguments ["service_id" .= settingsSubmissionDefinition.sId, "confirmation_token" .= token])
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation
@@ -89,7 +89,7 @@ test_200 requestContext = do
             ResponseMatcher {matchHeaders = expHeaders, matchStatus = expStatus, matchBody = MatchBody (\_ _ -> Nothing)}
       response `shouldRespondWith` responseMatcher
       let Just structuredContent = structuredContentOf response
-      liftIO $ stringField "serviceId" structuredContent `shouldBe` Just settingsSubmissionService.sId
+      liftIO $ stringField "serviceId" structuredContent `shouldBe` Just settingsSubmissionDefinition.sId
       assertToolOutputSchema reqHeaders "submit_document" structuredContent
       -- AND: Compare state in DB with expectation
       assertCountInDB findSubmissions requestContext 1
@@ -103,7 +103,7 @@ test_200 requestContext = do
       let expDto = toolErrorResult (localeMessage $ _ERROR_VALIDATION__ABSENCE "submission service")
       -- AND: Run migrations
       runDocumentMigrations requestContext
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation

@@ -12,7 +12,7 @@ import Shared.Api.Resource.Settings.SettingsJM ()
 import Shared.Database.Migration.Development.Settings.Data.Settings
 import Shared.Database.Migration.Development.Settings.SettingsMigration
 import Shared.Model.User.RolePermission
-import Shared.Service.Submission.SubmissionService (toSubmissionServiceSimple)
+import Shared.Service.Submission.SubmissionService (toSubmissionDefinitionSimple)
 import SharedTest.Specs.Api.Common
 import SharedTest.Specs.Api.Mcp
 import WizardServer.Model.Context.RequestContext
@@ -53,11 +53,11 @@ test_200 requestContext =
     do
       let expStatus = 200
       let expHeaders = resCtHeader : resCorsHeaders
-      let expContent = object ["services" .= [toSubmissionServiceSimple settingsSubmissionService]]
+      let expContent = object ["services" .= [toSubmissionDefinitionSimple settingsSubmissionDefinition]]
       let expDto = toolResult expContent
       -- AND: Run migrations
       runDocumentMigrations requestContext
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation

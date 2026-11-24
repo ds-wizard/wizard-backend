@@ -18,7 +18,7 @@ import Shared.Service.Submission.SubmissionMapper
 import Shared.Util.Uuid
 
 submissionCreate :: SubmissionCreateDTO
-submissionCreate = SubmissionCreateDTO {serviceId = settingsSubmissionService.sId}
+submissionCreate = SubmissionCreateDTO {serviceId = settingsSubmissionDefinition.sId}
 
 submission1 :: Submission
 submission1 =
@@ -27,7 +27,7 @@ submission1 =
     , state = DoneSubmissionState
     , location = Nothing
     , returnedData = Nothing
-    , serviceId = settingsSubmissionService.sId
+    , serviceId = settingsSubmissionDefinition.sId
     , documentUuid = doc1.uuid
     , tenantUuid = defaultTenant.uuid
     , createdBy = Just userAlbert.uuid
@@ -36,7 +36,7 @@ submission1 =
     }
 
 submission1List :: SubmissionList
-submission1List = toList submission1 settingsSubmissionService (Just userAlbertSuggestion)
+submission1List = toList submission1 settingsSubmissionDefinition (Just userAlbertSuggestion)
 
 submission2 :: Submission
 submission2 =
@@ -45,7 +45,7 @@ submission2 =
     , state = DoneSubmissionState
     , location = Nothing
     , returnedData = Nothing
-    , serviceId = settingsSubmissionService.sId
+    , serviceId = settingsSubmissionDefinition.sId
     , documentUuid = doc1.uuid
     , tenantUuid = defaultTenant.uuid
     , createdBy = Just userAlbert.uuid
@@ -54,7 +54,7 @@ submission2 =
     }
 
 submission2Dto :: SubmissionList
-submission2Dto = toList submission2 settingsSubmissionService (Just userAlbertSuggestion)
+submission2Dto = toList submission2 settingsSubmissionDefinition (Just userAlbertSuggestion)
 
 differentSubmission1 :: Submission
 differentSubmission1 =
@@ -63,7 +63,7 @@ differentSubmission1 =
     , state = DoneSubmissionState
     , location = Nothing
     , returnedData = Nothing
-    , serviceId = settingsSubmissionService.sId
+    , serviceId = settingsSubmissionDefinition.sId
     , documentUuid = differentDoc.uuid
     , tenantUuid = differentTenant.uuid
     , createdBy = Just userCharles.uuid

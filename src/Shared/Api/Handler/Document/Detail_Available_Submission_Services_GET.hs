@@ -16,14 +16,14 @@ type Detail_Available_Submission_Services_GET =
     :> "documents"
     :> Capture "docUuid" U.UUID
     :> "available-submission-services"
-    :> Get '[SafeJSON] (Headers '[Header "x-trace-uuid" String] [SettingsSubmissionServiceSimple])
+    :> Get '[SafeJSON] (Headers '[Header "x-trace-uuid" String] [SettingsSubmissionDefinitionSimple])
 
 detail_available_submission_Services_GET
   :: WizardHandlerC s sm r rm
   => Maybe String
   -> Maybe String
   -> U.UUID
-  -> sm (Headers '[Header "x-trace-uuid" String] [SettingsSubmissionServiceSimple])
+  -> sm (Headers '[Header "x-trace-uuid" String] [SettingsSubmissionDefinitionSimple])
 detail_available_submission_Services_GET mTokenHeader mServerUrl docUuid =
   getAuthServiceExecutor mTokenHeader mServerUrl $ \runInAuthService ->
     runInAuthService NoTransaction $ addTraceUuidHeader =<< getAvailableServicesForSubmission docUuid

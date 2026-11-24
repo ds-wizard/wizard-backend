@@ -24,9 +24,8 @@ dropConfigTables = do
         \DROP TABLE IF EXISTS tenant_plugin_settings; \
         \DROP TABLE IF EXISTS config_mail; \
         \DROP TABLE IF EXISTS settings_features; \
-        \DROP TABLE IF EXISTS settings_submission_service_supported_format; \
-        \DROP TABLE IF EXISTS settings_submission_service_request_header; \
-        \DROP TABLE IF EXISTS settings_submission_service; \
+        \DROP TABLE IF EXISTS settings_submission_definition_export; \
+        \DROP TABLE IF EXISTS settings_submission_definition; \
         \DROP TABLE IF EXISTS settings_submission; \
         \DROP TABLE IF EXISTS settings_projects; \
         \DROP TABLE IF EXISTS settings_registry; \
@@ -267,44 +266,32 @@ settingsTablesSql =
   \    CONSTRAINT settings_submission_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE, \
   \    CONSTRAINT settings_submission_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE \
   \); \
-  \CREATE TABLE settings_submission_service \
-  \( \
-  \    tenant_uuid                 uuid      NOT NULL, \
-  \    workspace_uuid              uuid, \
-  \    id                          varchar   NOT NULL, \
-  \    name                        varchar   NOT NULL, \
-  \    description                 varchar   NOT NULL, \
-  \    props                       varchar[] NOT NULL, \
-  \    request_method              varchar   NOT NULL, \
-  \    request_url                 varchar   NOT NULL, \
-  \    request_multipart_enabled   boolean   NOT NULL, \
-  \    request_multipart_file_name varchar   NOT NULL, \
-  \    CONSTRAINT settings_submission_service_key UNIQUE NULLS NOT DISTINCT (tenant_uuid, workspace_uuid, id), \
-  \    CONSTRAINT settings_submission_service_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE, \
-  \    CONSTRAINT settings_submission_service_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE \
-  \); \
-  \CREATE TABLE settings_submission_service_request_header \
+  \CREATE TABLE settings_submission_definition \
   \( \
   \    tenant_uuid    uuid    NOT NULL, \
   \    workspace_uuid uuid, \
-  \    service_id     varchar NOT NULL, \
+  \    id             varchar NOT NULL, \
+  \    position       integer NOT NULL, \
   \    name           varchar NOT NULL, \
-  \    value          varchar NOT NULL, \
-  \    CONSTRAINT settings_submission_service_request_header_key UNIQUE NULLS NOT DISTINCT (tenant_uuid, workspace_uuid, service_id, name), \
-  \    CONSTRAINT settings_submission_service_request_header_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE, \
-  \    CONSTRAINT settings_submission_service_request_header_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE \
+  \    description    varchar NOT NULL, \
+  \    target         jsonb   NOT NULL, \
+  \    CONSTRAINT settings_submission_definition_key UNIQUE NULLS NOT DISTINCT (tenant_uuid, workspace_uuid, id), \
+  \    CONSTRAINT settings_submission_definition_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE, \
+  \    CONSTRAINT settings_submission_definition_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE \
   \); \
-  \CREATE TABLE settings_submission_service_supported_format \
+  \CREATE TABLE settings_submission_definition_export \
   \( \
   \    tenant_uuid    uuid    NOT NULL, \
   \    workspace_uuid uuid, \
-  \    service_id     varchar NOT NULL, \
+  \    definition_id  varchar NOT NULL, \
+  \    position       integer NOT NULL, \
   \    id             varchar NOT NULL, \
   \    version        varchar NOT NULL, \
   \    format_name    varchar NOT NULL, \
-  \    CONSTRAINT settings_submission_service_supported_format_key UNIQUE NULLS NOT DISTINCT (tenant_uuid, workspace_uuid, service_id, id, version, format_name), \
-  \    CONSTRAINT settings_submission_service_supported_format_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE, \
-  \    CONSTRAINT settings_submission_service_supported_format_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE \
+  \    madmp_metadata boolean NOT NULL, \
+  \    CONSTRAINT settings_submission_definition_export_key UNIQUE NULLS NOT DISTINCT (tenant_uuid, workspace_uuid, definition_id, position), \
+  \    CONSTRAINT settings_submission_definition_export_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE, \
+  \    CONSTRAINT settings_submission_definition_export_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE \
   \);"
 
 createTcMailTable :: WizardRequestContextC s m => m Int64

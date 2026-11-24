@@ -28,7 +28,7 @@ import Shared.Model.Document.Document
 import Shared.Model.Error.Error
 import Shared.Model.Project.Project
 import Shared.Model.Settings.Settings
-import Shared.Service.Submission.SubmissionService (toSubmissionServiceSimple)
+import Shared.Service.Submission.SubmissionService (toSubmissionDefinitionSimple)
 import WizardServer.Model.Context.RequestContext
 
 import SharedTest.Specs.Api.Common
@@ -75,7 +75,7 @@ create_test_200 title requestContext project authHeader =
       -- AND: Prepare expectation
       let expStatus = 200
       let expHeaders = resCtHeader : resCorsHeaders
-      let expDto = [toSubmissionServiceSimple settingsSubmissionService]
+      let expDto = [toSubmissionDefinitionSimple settingsSubmissionDefinition]
       let expBody = encode expDto
       -- AND: Run migrations
       runInContextIO U_Migration.runMigration requestContext
@@ -85,7 +85,7 @@ create_test_200 title requestContext project authHeader =
       runInContextIO DOC_Migration.runMigration requestContext
       runInContextIO (deleteDocumentByUuid doc1.uuid) requestContext
       runInContextIO (insertDocument (doc1 {projectUuid = Just project.uuid})) requestContext
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation
@@ -97,39 +97,39 @@ test_200_format_mismatch requestContext =
   it "HTTP 200 OK (service whose supported format names another format is not offered)" $ do
     -- GIVEN: Prepare expectation
     let expHeaders = resCtHeader : resCorsHeaders
-    let format = settingsSubmissionServiceSupportedFormat {formatName = "Other format"} :: SettingsSubmissionServiceSupportedFormat
-    let service = settingsSubmissionService {supportedFormats = [format]} :: SettingsSubmissionService
+    let export = settingsSubmissionExport {formatName = "Other format"} :: SettingsSubmissionExport
+    let service = settingsSubmissionDefinition {exports = [export]} :: SettingsSubmissionDefinition
     -- AND: Run migrations
     runInContextIO U_Migration.runMigration requestContext
     runInContextIO TML_Migration.runMigration requestContext
     runInContextIO PRJ_Migration.runMigration requestContext
     runInContextIO DOC_Migration.runMigration requestContext
-    runInContextIO (saveSettingsSubmission defaultTenantUuid Nothing (settingsSubmission {services = [service]} :: SettingsSubmission)) requestContext
+    runInContextIO (saveSettingsSubmission defaultTenantUuid Nothing (settingsSubmission {definitions = [service]} :: SettingsSubmission)) requestContext
     -- WHEN: Call API
     response <- request reqMethod reqUrl [reqAuthHeader] reqBody
     -- THEN: Compare response with expectation
     let responseMatcher =
-          ResponseMatcher {matchHeaders = expHeaders, matchStatus = 200, matchBody = bodyEquals (encode ([] :: [SettingsSubmissionServiceSimple]))}
+          ResponseMatcher {matchHeaders = expHeaders, matchStatus = 200, matchBody = bodyEquals (encode ([] :: [SettingsSubmissionDefinitionSimple]))}
     response `shouldRespondWith` responseMatcher
 
 test_200_workspace_override requestContext =
   it "HTTP 200 OK (the submission override of the document's workspace replaces the organization services)" $ do
     -- GIVEN: Prepare expectation
     let expHeaders = resCtHeader : resCorsHeaders
-    let workspaceService = settingsSubmissionService {sId = "workspaceSubmissionServer", name = "Workspace Submission Server"} :: SettingsSubmissionService
+    let workspaceService = settingsSubmissionDefinition {sId = "workspaceSubmissionServer", name = "Workspace Submission Server"} :: SettingsSubmissionDefinition
     -- AND: Run migrations
     runInContextIO U_Migration.runMigration requestContext
     runInContextIO TML_Migration.runMigration requestContext
     runInContextIO PRJ_Migration.runMigration requestContext
     runInContextIO DOC_Migration.runMigration requestContext
-    runInContextIO seedSettingsSubmissionService requestContext
+    runInContextIO seedSettingsSubmissionDefinition requestContext
     enableMultiWorkspace requestContext
-    runInContextIO (saveSettingsSubmission defaultTenantUuid (Just defaultWorkspaceUuid) (settingsSubmission {services = [workspaceService]} :: SettingsSubmission)) requestContext
+    runInContextIO (saveSettingsSubmission defaultTenantUuid (Just defaultWorkspaceUuid) (settingsSubmission {definitions = [workspaceService]} :: SettingsSubmission)) requestContext
     -- WHEN: Call API
     response <- request reqMethod reqUrl [reqAuthHeader] reqBody
     -- THEN: Compare response with expectation
     let responseMatcher =
-          ResponseMatcher {matchHeaders = expHeaders, matchStatus = 200, matchBody = bodyEquals (encode [toSubmissionServiceSimple workspaceService])}
+          ResponseMatcher {matchHeaders = expHeaders, matchStatus = 200, matchBody = bodyEquals (encode [toSubmissionDefinitionSimple workspaceService])}
     response `shouldRespondWith` responseMatcher
 
 -- ----------------------------------------------------

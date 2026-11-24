@@ -14,6 +14,7 @@ import Shared.Model.Settings.Settings
 import Shared.Model.Tenant.Tenant
 import Shared.Model.Workspace.Workspace
 import Shared.Service.AuditLog.AuditLogService
+import Shared.Service.Settings.SettingsSubmissionUtil
 
 al_updateSettings :: WizardRequestContextC s m => Maybe U.UUID -> String -> AuditLogSettingsChanges -> m ()
 al_updateSettings mWorkspaceUuid section changes = whenAuditLogEnabled $ do
@@ -147,11 +148,9 @@ submissionChanges :: SettingsSubmission -> SettingsSubmission -> AuditLogSetting
 submissionChanges old new =
   noSettingsChanges
     { enabled = change old.enabled new.enabled
-    , services = mapChange (fmap redactHeaders) <$> change old.services new.services
+    , definitions = mapChange (fmap redactHeaders) <$> change old.definitions new.definitions
     }
     :: AuditLogSettingsChanges
 
-redactHeaders :: SettingsSubmissionService -> SettingsSubmissionService
-redactHeaders service =
-  let request = (service.request {headers = M.map (const "***") service.request.headers} :: SettingsSubmissionServiceRequest)
-   in (service {request = request} :: SettingsSubmissionService)
+redactHeaders :: SettingsSubmissionDefinition -> SettingsSubmissionDefinition
+redactHeaders = mapDefinitionRequest (\request -> request {headers = M.map (const "***") request.headers})

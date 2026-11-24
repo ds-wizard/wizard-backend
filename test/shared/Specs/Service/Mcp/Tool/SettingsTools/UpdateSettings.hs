@@ -198,15 +198,15 @@ test_200 requestContext = do
   it "HTTP 200 OK if a masked header value is sent back (the stored one kept, a new header stored)" $
     -- GIVEN: Prepare request
     do
-      let reqService = toJSON (withHeaders [("Api-Key", "********"), ("X-Extra", "abc")] settingsSubmissionService)
-      let reqBody = toolCallBody "update_settings" (object ["section" .= ("submission" :: String), "value" .= object ["services" .= [reqService]]])
+      let reqService = toJSON (withHeaders [("Api-Key", "********"), ("X-Extra", "abc")] settingsSubmissionDefinition)
+      let reqBody = toolCallBody "update_settings" (object ["section" .= ("submission" :: String), "value" .= object ["definitions" .= [reqService]]])
       -- AND: Prepare expectation
       let expStatus = 200
       let expHeaders = resCtHeader : resCorsHeaders
-      let expSettings = settingsSubmission {services = [withHeaders [("Api-Key", "${API Token}"), ("X-Extra", "abc")] settingsSubmissionService]} :: SettingsSubmission
+      let expSettings = settingsSubmission {definitions = [withHeaders [("Api-Key", "${API Token}"), ("X-Extra", "abc")] settingsSubmissionDefinition]} :: SettingsSubmission
       let expDto = toolResult (toJSON (SettingsDTO (maskedSubmission expSettings) Nothing Nothing))
       -- AND: Run migrations
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation
@@ -218,14 +218,14 @@ test_200 requestContext = do
   it "HTTP 200 OK if a masked header value comes with a new request url (tool error)" $
     -- GIVEN: Prepare request
     do
-      let reqService = toJSON (withRequestUrl "https://collector.example.com" (withHeaders [("Api-Key", "********")] settingsSubmissionService))
-      let reqBody = toolCallBody "update_settings" (object ["section" .= ("submission" :: String), "value" .= object ["services" .= [reqService]]])
+      let reqService = toJSON (withRequestUrl "https://collector.example.com" (withHeaders [("Api-Key", "********")] settingsSubmissionDefinition))
+      let reqBody = toolCallBody "update_settings" (object ["section" .= ("submission" :: String), "value" .= object ["definitions" .= [reqService]]])
       -- AND: Prepare expectation
       let expStatus = 200
       let expHeaders = resCtHeader : resCorsHeaders
-      let expDto = toolErrorResult . localeMessage . _ERROR_SERVICE_MCP__MASKED_SECRET_TARGET_CHANGED $ "request url of the submission service " ++ settingsSubmissionService.sId
+      let expDto = toolErrorResult . localeMessage . _ERROR_SERVICE_MCP__MASKED_SECRET_TARGET_CHANGED $ "request url of the submission definition " ++ settingsSubmissionDefinition.sId
       -- AND: Run migrations
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation
@@ -243,7 +243,7 @@ test_200 requestContext = do
       let expHeaders = resCtHeader : resCorsHeaders
       let expDto = toolErrorResult (localeMessage $ _ERROR_VALIDATION__MISSING_PERMISSION _MCP_SENSITIVE_ROLE_PERMISSION)
       -- AND: Run migrations
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       removeSensitivePermission requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody

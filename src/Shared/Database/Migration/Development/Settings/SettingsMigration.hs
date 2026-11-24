@@ -30,7 +30,7 @@ seedSettings tenantUuid = do
   saveSettingsDashboardAndMenu tenantUuid Nothing settingsDashboardAndMenu
   saveSettingsProjects tenantUuid Nothing settingsProjects
   saveSettingsSupport tenantUuid Nothing settingsSupport
-  saveSettingsSubmission tenantUuid Nothing (settingsSubmission {services = []})
+  saveSettingsSubmission tenantUuid Nothing (settingsSubmission {definitions = []})
 
-seedSettingsSubmissionService :: WizardRequestContextC s m => m ()
-seedSettingsSubmissionService = saveSettingsSubmission defaultTenantUuid Nothing settingsSubmission
+seedSettingsSubmissionDefinition :: WizardRequestContextC s m => m ()
+seedSettingsSubmissionDefinition = saveSettingsSubmission defaultTenantUuid Nothing settingsSubmission

@@ -172,23 +172,39 @@ instance ToJSON SettingsSubmission where
 instance JsonSchema SettingsSubmission where
   jsonSchema = genericJsonSchema jsonOptions
 
-instance FromJSON SettingsSubmissionService where
+instance FromJSON SettingsSubmissionDefinition where
   parseJSON = genericParseJSON jsonOptions
 
-instance ToJSON SettingsSubmissionService where
+instance ToJSON SettingsSubmissionDefinition where
   toJSON = genericToJSON jsonOptions
 
-instance JsonSchema SettingsSubmissionService where
+instance JsonSchema SettingsSubmissionDefinition where
   jsonSchema = genericJsonSchema jsonOptions
 
-instance FromJSON SettingsSubmissionServiceSupportedFormat where
+instance FromJSON SettingsSubmissionExport where
   parseJSON = genericParseJSON jsonOptions
 
-instance ToJSON SettingsSubmissionServiceSupportedFormat where
+instance ToJSON SettingsSubmissionExport where
   toJSON = genericToJSON jsonOptions
 
-instance JsonSchema SettingsSubmissionServiceSupportedFormat where
+instance JsonSchema SettingsSubmissionExport where
   jsonSchema = genericJsonSchema jsonOptions
+
+instance FromJSON SettingsSubmissionTarget where
+  parseJSON = genericParseJSON (jsonOptionsWithTypeField "type")
+
+instance ToJSON SettingsSubmissionTarget where
+  toJSON = genericToJSON (jsonOptionsWithTypeField "type")
+
+instance JsonSchema SettingsSubmissionTarget where
+  jsonSchema = genericJsonSchema (jsonOptionsWithTypeField "type")
+
+instance FromJSON ZenodoRepository
+
+instance ToJSON ZenodoRepository
+
+instance JsonSchema ZenodoRepository where
+  jsonSchema = genericJsonSchema defaultOptions
 
 instance FromJSON SettingsSubmissionServiceRequest where
   parseJSON = genericParseJSON jsonOptions
@@ -222,11 +238,11 @@ instance ToJSON ProjectCreation
 instance JsonSchema ProjectCreation where
   jsonSchema = genericJsonSchema defaultOptions
 
-instance FromJSON SettingsSubmissionServiceSimple where
+instance FromJSON SettingsSubmissionDefinitionSimple where
   parseJSON = genericParseJSON jsonOptions
 
-instance ToJSON SettingsSubmissionServiceSimple where
+instance ToJSON SettingsSubmissionDefinitionSimple where
   toJSON = genericToJSON jsonOptions
 
-instance JsonSchema SettingsSubmissionServiceSimple where
+instance JsonSchema SettingsSubmissionDefinitionSimple where
   jsonSchema = genericJsonSchema jsonOptions

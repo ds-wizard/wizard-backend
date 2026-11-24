@@ -129,26 +129,45 @@ data SettingsSupport = SettingsSupport
 
 data SettingsSubmission = SettingsSubmission
   { enabled :: Bool
-  , services :: [SettingsSubmissionService]
+  , definitions :: [SettingsSubmissionDefinition]
   }
   deriving (Generic, Eq, Show)
 
-data SettingsSubmissionService = SettingsSubmissionService
+data SettingsSubmissionDefinition = SettingsSubmissionDefinition
   { sId :: String
   , name :: String
   , description :: String
-  , props :: [String]
-  , supportedFormats :: [SettingsSubmissionServiceSupportedFormat]
-  , request :: SettingsSubmissionServiceRequest
+  , exports :: [SettingsSubmissionExport]
+  , target :: SettingsSubmissionTarget
   }
   deriving (Generic, Eq, Show)
 
-data SettingsSubmissionServiceSupportedFormat = SettingsSubmissionServiceSupportedFormat
+data SettingsSubmissionExport = SettingsSubmissionExport
   { id :: String
   , version :: String
   , formatName :: String
+  , madmpMetadata :: Bool
   }
   deriving (Generic, Eq, Show)
+
+data SettingsSubmissionTarget
+  = HttpSubmissionTarget
+      { props :: [String]
+      , request :: SettingsSubmissionServiceRequest
+      }
+  | ZenodoSubmissionTarget
+      { repository :: ZenodoRepository
+      , resourceType :: String
+      , licenseId :: String
+      , accessLevel :: String
+      , community :: Maybe String
+      }
+  deriving (Generic, Eq, Show)
+
+data ZenodoRepository
+  = SandboxZenodoRepository
+  | ProductionZenodoRepository
+  deriving (Generic, Eq, Show, Read, Ord, Enum, Bounded)
 
 data SettingsSubmissionServiceRequest = SettingsSubmissionServiceRequest
   { method :: String
@@ -164,7 +183,7 @@ data SettingsSubmissionServiceRequestMultipart = SettingsSubmissionServiceReques
   }
   deriving (Generic, Eq, Show)
 
-data SettingsSubmissionServiceSimple = SettingsSubmissionServiceSimple
+data SettingsSubmissionDefinitionSimple = SettingsSubmissionDefinitionSimple
   { sId :: String
   , name :: String
   , description :: String

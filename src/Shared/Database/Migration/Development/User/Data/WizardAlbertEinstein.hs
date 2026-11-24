@@ -144,7 +144,7 @@ userAlbertApiToken :: UserSubmissionProp
 userAlbertApiToken =
   UserSubmissionProp
     { userUuid = userAlbert.uuid
-    , serviceId = settingsSubmissionService.sId
+    , serviceId = settingsSubmissionDefinition.sId
     , values = M.fromList [(settingsSubmissionServiceSecretProp, ""), (settingsSubmissionServiceApiTokenProp, "Some Token")]
     , tenantUuid = defaultTenant.uuid
     , createdAt = dt' 2018 1 21
@@ -154,8 +154,8 @@ userAlbertApiToken =
 userAlbertApiTokenList :: UserSubmissionPropList
 userAlbertApiTokenList =
   UserSubmissionPropList
-    { sId = settingsSubmissionService.sId
-    , name = settingsSubmissionService.name
+    { sId = settingsSubmissionDefinition.sId
+    , name = settingsSubmissionDefinition.name
     , values = M.fromList [(settingsSubmissionServiceSecretProp, ""), (settingsSubmissionServiceApiTokenProp, "Some Token")]
     }
 
@@ -171,8 +171,8 @@ userAlbertApiTokenEdited =
 userAlbertApiTokenEditedDto :: UserSubmissionPropList
 userAlbertApiTokenEditedDto =
   UserSubmissionPropList
-    { sId = settingsSubmissionService.sId
-    , name = settingsSubmissionService.name
+    { sId = settingsSubmissionDefinition.sId
+    , name = settingsSubmissionDefinition.name
     , values = M.fromList [(settingsSubmissionServiceSecretProp, ""), (settingsSubmissionServiceApiTokenProp, "EDITED: Some Token")]
     }
 

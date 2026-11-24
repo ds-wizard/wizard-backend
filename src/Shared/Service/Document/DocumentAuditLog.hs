@@ -28,7 +28,7 @@ al_deleteDocument doc = whenAuditLogEnabled $ do
   mProject <- findDocumentProjectRef doc
   logAuditLog documentsDelete (documentEntity doc) AuditLogDocumentData {project = mProject}
 
-al_submitDocument :: WizardRequestContextC s m => Document -> SettingsSubmissionService -> Submission -> m ()
+al_submitDocument :: WizardRequestContextC s m => Document -> SettingsSubmissionDefinition -> Submission -> m ()
 al_submitDocument doc service submission = whenAuditLogEnabled $ do
   mProject <- findDocumentProjectRef doc
   logAuditLog

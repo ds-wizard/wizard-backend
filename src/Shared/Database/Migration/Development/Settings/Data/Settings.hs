@@ -82,10 +82,10 @@ editedSettingsSupport :: SettingsSupport
 editedSettingsSupport = settingsSupport {supportEmail = Just "support@example.com"}
 
 settingsSubmission :: SettingsSubmission
-settingsSubmission = SettingsSubmission {enabled = True, services = [settingsSubmissionService]}
+settingsSubmission = SettingsSubmission {enabled = True, definitions = [settingsSubmissionDefinition]}
 
 settingsSubmissionEmpty :: SettingsSubmission
-settingsSubmissionEmpty = SettingsSubmission {enabled = True, services = []}
+settingsSubmissionEmpty = SettingsSubmission {enabled = True, definitions = []}
 
 settingsSubmissionServiceApiTokenProp :: String
 settingsSubmissionServiceApiTokenProp = "API Token"
@@ -93,23 +93,47 @@ settingsSubmissionServiceApiTokenProp = "API Token"
 settingsSubmissionServiceSecretProp :: String
 settingsSubmissionServiceSecretProp = "Secret"
 
-settingsSubmissionService :: SettingsSubmissionService
-settingsSubmissionService =
-  SettingsSubmissionService
+settingsSubmissionDefinition :: SettingsSubmissionDefinition
+settingsSubmissionDefinition =
+  SettingsSubmissionDefinition
     { sId = "mySubmissionServer"
     , name = "My Submission Server"
     , description = "Some description"
-    , props = [settingsSubmissionServiceApiTokenProp, settingsSubmissionServiceSecretProp]
-    , supportedFormats = [settingsSubmissionServiceSupportedFormat]
-    , request = settingsSubmissionServiceRequest
+    , exports = [settingsSubmissionExport]
+    , target = settingsSubmissionHttpTarget
     }
 
-settingsSubmissionServiceSupportedFormat :: SettingsSubmissionServiceSupportedFormat
-settingsSubmissionServiceSupportedFormat =
-  SettingsSubmissionServiceSupportedFormat
+settingsSubmissionExport :: SettingsSubmissionExport
+settingsSubmissionExport =
+  SettingsSubmissionExport
     { id = wizardDocumentTemplate.id
     , version = wizardDocumentTemplate.version
     , formatName = formatJson.name
+    , madmpMetadata = False
+    }
+
+settingsSubmissionHttpTarget :: SettingsSubmissionTarget
+settingsSubmissionHttpTarget =
+  HttpSubmissionTarget
+    { props = [settingsSubmissionServiceApiTokenProp, settingsSubmissionServiceSecretProp]
+    , request = settingsSubmissionServiceRequest
+    }
+
+settingsSubmissionZenodoDefinition :: SettingsSubmissionDefinition
+settingsSubmissionZenodoDefinition =
+  SettingsSubmissionDefinition
+    { sId = "zenodoSandbox"
+    , name = "Zenodo Sandbox"
+    , description = "Deposit the DMP to Zenodo Sandbox"
+    , exports = [settingsSubmissionExport {madmpMetadata = True}]
+    , target =
+        ZenodoSubmissionTarget
+          { repository = SandboxZenodoRepository
+          , resourceType = "publication-datamanagementplan"
+          , licenseId = "cc-by-4.0"
+          , accessLevel = "public"
+          , community = Nothing
+          }
     }
 
 settingsSubmissionServiceRequest :: SettingsSubmissionServiceRequest

@@ -96,11 +96,16 @@ instance ToSchema SettingsProjectsSharing where
 instance ToSchema SettingsProjectsTagging where
   declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)
 
-instance ToSchema SettingsSubmissionService where
+instance ToSchema SettingsSubmissionDefinition where
   declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)
 
-instance ToSchema SettingsSubmissionServiceSupportedFormat where
+instance ToSchema SettingsSubmissionExport where
   declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)
+
+instance ToSchema SettingsSubmissionTarget where
+  declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions (jsonOptionsWithTypeField "type"))
+
+instance ToSchema ZenodoRepository
 
 instance ToSchema SettingsSubmissionServiceRequest where
   declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)
@@ -112,5 +117,5 @@ instance ToSchema SettingsAnnouncementLevelType
 
 instance ToSchema ProjectCreation
 
-instance ToSchema SettingsSubmissionServiceSimple where
+instance ToSchema SettingsSubmissionDefinitionSimple where
   declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)

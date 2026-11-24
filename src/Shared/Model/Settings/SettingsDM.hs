@@ -70,4 +70,4 @@ defaultSettingsSupport =
     }
 
 defaultSettingsSubmission :: SettingsSubmission
-defaultSettingsSubmission = SettingsSubmission {enabled = False, services = []}
+defaultSettingsSubmission = SettingsSubmission {enabled = False, definitions = []}

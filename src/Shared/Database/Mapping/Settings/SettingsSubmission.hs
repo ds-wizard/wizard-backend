@@ -1,12 +1,11 @@
 module Shared.Database.Mapping.Settings.SettingsSubmission where
 
-import qualified Data.Map.Strict as M
-import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.FromRow
 import Database.PostgreSQL.Simple.ToField
 import Database.PostgreSQL.Simple.ToRow
-import Database.PostgreSQL.Simple.Types
 
+import Shared.Api.Resource.Settings.SettingsJM ()
 import Shared.Model.Settings.Settings
 
 instance ToRow SettingsSubmission where
@@ -15,34 +14,26 @@ instance ToRow SettingsSubmission where
 instance FromRow SettingsSubmission where
   fromRow = do
     enabled <- field
-    let services = []
+    let definitions = []
     return SettingsSubmission {..}
 
-instance ToRow SettingsSubmissionService where
-  toRow SettingsSubmissionService {..} =
+instance ToRow SettingsSubmissionDefinition where
+  toRow SettingsSubmissionDefinition {..} =
     [ toField sId
     , toField name
     , toField description
-    , toField . PGArray $ props
-    , toField request.method
-    , toField request.url
-    , toField request.multipart.enabled
-    , toField request.multipart.fileName
+    , toJSONField target
     ]
 
-instance FromRow SettingsSubmissionService where
+instance FromRow SettingsSubmissionDefinition where
   fromRow = do
     sId <- field
     name <- field
     description <- field
-    props <- fromPGArray <$> field
-    let supportedFormats = []
-    method <- field
-    url <- field
-    multipart <- SettingsSubmissionServiceRequestMultipart <$> field <*> field
-    let request = SettingsSubmissionServiceRequest {headers = M.empty, ..}
-    return SettingsSubmissionService {..}
+    target <- fieldWith fromJSONField
+    let exports = []
+    return SettingsSubmissionDefinition {..}
 
-instance ToRow SettingsSubmissionServiceSupportedFormat
+instance ToRow SettingsSubmissionExport
 
-instance FromRow SettingsSubmissionServiceSupportedFormat
+instance FromRow SettingsSubmissionExport

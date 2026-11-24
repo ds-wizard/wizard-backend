@@ -80,7 +80,7 @@ create_test_201 title requestContext project authHeader user =
       -- AND: Prepare expectation
       let expStatus = 201
       let expHeaders = resCtHeaderPlain : resCorsHeadersPlain
-      let expDto = toList submission2 settingsSubmissionService (Just user)
+      let expDto = toList submission2 settingsSubmissionDefinition (Just user)
       let expBody = encode expDto
       let expType (a :: SubmissionList) = a
       -- AND: Run migrations
@@ -91,7 +91,7 @@ create_test_201 title requestContext project authHeader user =
       runInContextIO DOC_Migration.runMigration requestContext
       runInContextIO (deleteDocumentByUuid doc1.uuid) requestContext
       runInContextIO (insertDocument (doc1 {projectUuid = Just project.uuid})) requestContext
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation

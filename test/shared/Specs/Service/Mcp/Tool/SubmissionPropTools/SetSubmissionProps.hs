@@ -50,7 +50,7 @@ reqHeaders = [reqAuthHeader, reqCtHeader]
 
 reqValues = M.fromList [(settingsSubmissionServiceApiTokenProp, "********" :: String), (settingsSubmissionServiceSecretProp, "new secret")]
 
-reqArguments = object ["props" .= M.fromList [(settingsSubmissionService.sId, reqValues)]]
+reqArguments = object ["props" .= M.fromList [(settingsSubmissionDefinition.sId, reqValues)]]
 
 reqBody = toolCallBody "set_submission_props" reqArguments
 
@@ -64,11 +64,11 @@ test_200 requestContext = do
       let expStatus = 200
       let expHeaders = resCtHeader : resCorsHeaders
       let expValues = M.fromList [(settingsSubmissionServiceApiTokenProp, "********" :: String), (settingsSubmissionServiceSecretProp, "********")]
-      let expContent = object ["services" .= [object ["id" .= settingsSubmissionService.sId, "name" .= settingsSubmissionService.name, "values" .= expValues]]]
+      let expContent = object ["services" .= [object ["id" .= settingsSubmissionDefinition.sId, "name" .= settingsSubmissionDefinition.name, "values" .= expValues]]]
       let expDto = toolResult expContent
       let expProps = userAlbertApiToken {values = M.fromList [(settingsSubmissionServiceApiTokenProp, "Some Token"), (settingsSubmissionServiceSecretProp, "new secret")]} :: UserSubmissionProp
       -- AND: Run migrations
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       runInContextIO (traverse_ insertOrUpdateUserSubmissionProp userAlbertSubmissionProps) requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
@@ -86,7 +86,7 @@ test_200 requestContext = do
       let expHeaders = resCtHeader : resCorsHeaders
       let expDto = toolErrorResult (localeMessage $ _ERROR_VALIDATION__MISSING_PERMISSION _MCP_SENSITIVE_ROLE_PERMISSION)
       -- AND: Run migrations
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       runInContextIO (traverse_ insertOrUpdateUserSubmissionProp userAlbertSubmissionProps) requestContext
       removeSensitivePermission requestContext
       -- WHEN: Call API

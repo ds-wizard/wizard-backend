@@ -54,7 +54,7 @@ test_200 requestContext =
       let expBody = encode expDto
       -- AND: Run migrations
       runInContextIO TML_Migration.runMigration requestContext
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       runInContextIO (traverse_ insertOrUpdateUserSubmissionProp userAlbertSubmissionProps) requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody

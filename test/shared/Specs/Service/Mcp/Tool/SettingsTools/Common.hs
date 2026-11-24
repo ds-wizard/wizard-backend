@@ -14,6 +14,7 @@ import Shared.Database.DAO.Settings.SettingsSubmissionDAO
 import Shared.Database.DAO.Settings.SettingsSupportDAO
 import Shared.Model.Settings.Settings
 import Shared.Service.Settings.OrganizationSettingsService
+import Shared.Service.Settings.SettingsSubmissionUtil
 import WizardServer.Model.Context.RequestContext
 
 import Specs.Api.Handler.Common
@@ -28,13 +29,13 @@ settingsToolNames :: [Value]
 settingsToolNames = [String "get_settings", String "update_settings"]
 
 maskedSubmission :: SettingsSubmission -> SettingsSubmission
-maskedSubmission settings = settings {services = fmap (\service -> withHeaders [(header, "********") | header <- M.keys service.request.headers] service) settings.services}
+maskedSubmission settings = settings {definitions = fmap (mapDefinitionRequest (\request -> request {headers = M.fromList [(header, "********") | header <- M.keys request.headers]})) settings.definitions}
 
-withRequestUrl :: String -> SettingsSubmissionService -> SettingsSubmissionService
-withRequestUrl url service = service {request = service.request {url = url}}
+withRequestUrl :: String -> SettingsSubmissionDefinition -> SettingsSubmissionDefinition
+withRequestUrl url = mapDefinitionRequest (\request -> request {url = url})
 
-withHeaders :: [(String, String)] -> SettingsSubmissionService -> SettingsSubmissionService
-withHeaders headers service = service {request = service.request {headers = M.fromList headers}}
+withHeaders :: [(String, String)] -> SettingsSubmissionDefinition -> SettingsSubmissionDefinition
+withHeaders headers = withDefinitionHeaders (M.fromList headers)
 
 -- --------------------------------
 -- ASSERTS

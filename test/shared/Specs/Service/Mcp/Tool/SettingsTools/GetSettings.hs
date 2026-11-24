@@ -112,7 +112,7 @@ test_200 requestContext = do
       let expContent = toJSON (SettingsDTO (maskedSubmission settingsSubmission) Nothing Nothing)
       let expDto = toolResult expContent
       -- AND: Run migrations
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation

@@ -52,12 +52,12 @@ findSubmissionsByDocumentUuid documentUuid = do
           \       user_entity.affiliation \
           \FROM submission \
           \LEFT JOIN document ON document.uuid = submission.document_uuid AND document.tenant_uuid = submission.tenant_uuid \
-          \LEFT JOIN LATERAL (SELECT settings_service.id, settings_service.name \
-          \                   FROM settings_submission_service settings_service \
-          \                   WHERE settings_service.tenant_uuid = submission.tenant_uuid \
-          \                     AND settings_service.id = submission.service_id \
-          \                     AND (settings_service.workspace_uuid IS NULL OR settings_service.workspace_uuid = document.workspace_uuid) \
-          \                   ORDER BY settings_service.workspace_uuid NULLS LAST \
+          \LEFT JOIN LATERAL (SELECT settings_definition.id, settings_definition.name \
+          \                   FROM settings_submission_definition settings_definition \
+          \                   WHERE settings_definition.tenant_uuid = submission.tenant_uuid \
+          \                     AND settings_definition.id = submission.service_id \
+          \                     AND (settings_definition.workspace_uuid IS NULL OR settings_definition.workspace_uuid = document.workspace_uuid) \
+          \                   ORDER BY settings_definition.workspace_uuid NULLS LAST \
           \                   LIMIT 1) service ON true \
           \LEFT JOIN user_entity ON user_entity.tenant_uuid = submission.tenant_uuid AND user_entity.uuid = submission.created_by \
           \WHERE submission.tenant_uuid = ? AND submission.document_uuid = ? \
