@@ -73,7 +73,7 @@ zenodoAuthServiceSpec requestContext =
         "https://sandbox.zenodo.org/oauth/authorize?" `L.isPrefixOf` authorization.url `shouldBe` True
         "client_id=sandbox-client-id" `L.isInfixOf` authorization.url `shouldBe` True
         "code_challenge_method=S256" `L.isInfixOf` authorization.url `shouldBe` True
-        "%2Fzenodo%2Fcallback" `L.isInfixOf` authorization.url `shouldBe` True
+        "%2Fusers%2Fedit%2Fcurrent%2Fzenodo-connections" `L.isInfixOf` authorization.url `shouldBe` True
       it "refuses a repository that is not configured" $ do
         prepare requestContext
         result <- runInContext (authorizeZenodo (ZenodoAuthorizeDTO ProductionZenodoRepository)) requestContext

@@ -42,7 +42,8 @@ getZenodoConnections = do
   return [toConnectionDTO repository (L.find ((== repository) . (.repository)) credentials) | repository <- availableZenodoRepositories settings]
 
 -- Starts the OAuth authorization code flow with PKCE; the frontend redirects the user to the returned URL and Zenodo
--- redirects back to <client url>/zenodo/callback
+-- redirects back to the Zenodo connections of the profile (<client url>/users/edit/current/zenodo-connections),
+-- which completes the flow with the code and the state
 authorizeZenodo :: WizardRequestContextC s m => ZenodoAuthorizeDTO -> m ZenodoAuthorizationDTO
 authorizeZenodo reqDto =
   runInTransaction $ do
@@ -144,7 +145,7 @@ getRepositorySettings repository = do
     else throwError . UserError $ _ERROR_SERVICE_ZENODO__REPOSITORY_NOT_AVAILABLE (show repository)
 
 getRedirectUri :: WizardRequestContextC s m => m String
-getRedirectUri = (++ "/zenodo/callback") <$> getClientUrl
+getRedirectUri = (++ "/users/edit/current/zenodo-connections") <$> getClientUrl
 
 storeToken :: WizardRequestContextC s m => U.UUID -> ZenodoRepository -> Maybe String -> ZenodoTokenResponse -> m UserZenodoCredential
 storeToken userUuid repository mPreviousRefreshToken token = do
