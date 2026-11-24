@@ -1,7 +1,6 @@
 module WizardServer.Service.Bootstrap.BootstrapMapper where
 
 import Shared.Api.Resource.Bootstrap.BootstrapCommonDTO
-import Shared.Model.Config.SimpleFeature
 import Shared.Model.Config.WizardServerConfig
 import Shared.Model.OpenId.OpenIdClientSimple
 import Shared.Model.Settings.Settings
@@ -20,7 +19,7 @@ toBootstrapDTO serverConfig tenant settings openIdClients mUserProfile tours boo
     , loginScreen = settings.loginScreen
     , dashboardAndMenu = settings.dashboardAndMenu
     , support = settings.support
-    , submission = SimpleFeature settings.submission.enabled
+    , submission = toBootstrapSubmissionDTO settings.submission settings.zenodo
     , features = settings.features {aiAssistantEnabled = serverConfig.admin.enabled && settings.features.aiAssistantEnabled}
     , privacy = toPrivacyDTO serverConfig.general.privacyUrl serverConfig.general.termsOfServiceUrl
     , lookAndFeel = settings.lookAndFeel

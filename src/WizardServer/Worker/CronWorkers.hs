@@ -5,6 +5,7 @@ import Control.Monad.Reader (asks)
 
 import Shared.Database.DAO.OpenId.OpenIdClientSessionDAO
 import Shared.Database.DAO.Submission.SubmissionDAO (failTimedOutSubmissions)
+import Shared.Database.DAO.Zenodo.ZenodoOAuthSessionDAO (deleteExpiredZenodoOAuthSessions)
 import Shared.Database.VacuumCleaner
 import Shared.Model.Cache.ServerCache
 import Shared.Model.Config.ServerConfig
@@ -28,6 +29,7 @@ workers =
        , persistentCommandRetryWorker
        , persistentCommandRetryLambdaWorker
        , submissionTimeoutWorker
+       , cleanZenodoOAuthSessionWorker
        , cleanUserTokenWorker
        , expireUserTokenWorker
        , cleanUserRegistrationPendingWorker
@@ -74,6 +76,16 @@ submissionTimeoutWorker =
     , function = do
         timeoutInMinutes <- asks (.serverConfig'.submission.timeoutInMinutes)
         void $ failTimedOutSubmissions timeoutInMinutes
+    , wrapInTransaction = True
+    }
+
+cleanZenodoOAuthSessionWorker :: (WizardServerContextType s, WizardRequestContextC r rm) => CronWorker s rm
+cleanZenodoOAuthSessionWorker =
+  CronWorker
+    { name = "CleanZenodoOAuthSessionWorker"
+    , condition = const True
+    , cron = const "*/30 * * * *"
+    , function = void deleteExpiredZenodoOAuthSessions
     , wrapInTransaction = True
     }
 

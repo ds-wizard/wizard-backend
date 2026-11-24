@@ -6,7 +6,6 @@ import qualified Data.UUID as U
 import GHC.Generics
 
 import Shared.Api.Resource.Bootstrap.BootstrapCommonDTO
-import Shared.Model.Config.SimpleFeature
 import Shared.Model.OpenId.OpenIdClientSimple
 import Shared.Model.Plugin.PluginList
 import Shared.Model.Settings.Settings
@@ -23,7 +22,7 @@ data BootstrapDTO
       , loginScreen :: SettingsLoginScreen
       , dashboardAndMenu :: SettingsDashboardAndMenu
       , support :: SettingsSupport
-      , submission :: SimpleFeature
+      , submission :: BootstrapSubmissionDTO
       , features :: SettingsFeatures
       , privacy :: BootstrapPrivacyDTO
       , lookAndFeel :: SettingsLookAndFeel

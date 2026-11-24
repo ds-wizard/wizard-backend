@@ -59,6 +59,7 @@ import qualified Shared.Database.Migration.Development.UserEmailLink.UserEmailLi
 import qualified Shared.Database.Migration.Development.Websocket.WebsocketSchemaMigration as Websocket
 import qualified Shared.Database.Migration.Development.Workspace.WorkspaceMigration as Workspace
 import qualified Shared.Database.Migration.Development.Workspace.WorkspaceSchemaMigration as Workspace
+import qualified Shared.Database.Migration.Development.Zenodo.ZenodoSchemaMigration as Zenodo
 import Shared.Model.Context.WizardRequestContext
 import Shared.Util.Logger
 
@@ -88,6 +89,7 @@ runMigration = do
   Prefab.dropTables
   PersistentCommand.dropTables
   Submission.dropTables
+  Zenodo.dropTables
   UserEmailLink.dropTables
   Mcp.dropTables
   KnowledgeModelMigration.dropTables
@@ -147,6 +149,7 @@ runMigration = do
   Document.createTables
   KnowledgeModelMigration.createTables
   Submission.createTables
+  Zenodo.createTables
   PersistentCommand.createTables
   Prefab.createTables
   TelemetryEvent.createTables

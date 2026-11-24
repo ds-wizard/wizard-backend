@@ -20,6 +20,12 @@ instance FromJSON BootstrapCloudDTO where
 instance ToJSON BootstrapCloudDTO where
   toJSON = genericToJSON jsonOptions
 
+instance FromJSON BootstrapSubmissionDTO where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON BootstrapSubmissionDTO where
+  toJSON = genericToJSON jsonOptions
+
 instance FromJSON WorkspaceBootstrapDTO where
   parseJSON = genericParseJSON jsonOptions
 

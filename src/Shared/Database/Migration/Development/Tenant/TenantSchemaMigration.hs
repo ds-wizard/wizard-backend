@@ -24,6 +24,7 @@ dropConfigTables = do
         \DROP TABLE IF EXISTS tenant_plugin_settings; \
         \DROP TABLE IF EXISTS config_mail; \
         \DROP TABLE IF EXISTS settings_features; \
+        \DROP TABLE IF EXISTS settings_zenodo; \
         \DROP TABLE IF EXISTS settings_submission_definition_export; \
         \DROP TABLE IF EXISTS settings_submission_definition; \
         \DROP TABLE IF EXISTS settings_submission; \
@@ -265,6 +266,20 @@ settingsTablesSql =
   \    CONSTRAINT settings_submission_key UNIQUE NULLS NOT DISTINCT (tenant_uuid, workspace_uuid), \
   \    CONSTRAINT settings_submission_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE, \
   \    CONSTRAINT settings_submission_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE \
+  \); \
+  \CREATE TABLE settings_zenodo \
+  \( \
+  \    tenant_uuid              uuid        NOT NULL, \
+  \    sandbox_enabled          boolean     NOT NULL, \
+  \    sandbox_client_id        varchar     NOT NULL, \
+  \    sandbox_client_secret    varchar     NOT NULL, \
+  \    production_enabled       boolean     NOT NULL, \
+  \    production_client_id     varchar     NOT NULL, \
+  \    production_client_secret varchar     NOT NULL, \
+  \    created_at               timestamptz NOT NULL, \
+  \    updated_at               timestamptz NOT NULL, \
+  \    CONSTRAINT settings_zenodo_pk PRIMARY KEY (tenant_uuid), \
+  \    CONSTRAINT settings_zenodo_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE \
   \); \
   \CREATE TABLE settings_submission_definition \
   \( \

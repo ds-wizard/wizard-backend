@@ -20,3 +20,15 @@ settingsRegistryApi = Proxy
 
 settingsRegistryServer :: WizardHandlerC s sm r rm => ServerT SettingsRegistryAPI sm
 settingsRegistryServer = list_GET getSettingsRegistry :<|> list_PUT modifySettingsRegistry
+
+type SettingsZenodoAPI =
+  Tags "Settings"
+    :> ( List_GET "zenodo" SettingsZenodo
+           :<|> List_PUT "zenodo" SettingsZenodo
+       )
+
+settingsZenodoApi :: Proxy SettingsZenodoAPI
+settingsZenodoApi = Proxy
+
+settingsZenodoServer :: WizardHandlerC s sm r rm => ServerT SettingsZenodoAPI sm
+settingsZenodoServer = list_GET getSettingsZenodo :<|> list_PUT modifySettingsZenodo

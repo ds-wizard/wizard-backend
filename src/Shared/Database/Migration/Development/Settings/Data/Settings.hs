@@ -144,3 +144,10 @@ settingsSubmissionServiceRequest =
     , headers = M.fromList [("Api-Key", "${API Token}")]
     , multipart = SettingsSubmissionServiceRequestMultipart {enabled = False, fileName = "file"}
     }
+
+settingsZenodo :: SettingsZenodo
+settingsZenodo =
+  SettingsZenodo
+    { sandbox = SettingsZenodoRepository {enabled = True, clientId = "sandbox-client-id", clientSecret = "sandbox-client-secret"}
+    , production = defaultSettingsZenodoRepository
+    }

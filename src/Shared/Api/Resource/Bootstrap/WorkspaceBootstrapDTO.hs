@@ -5,7 +5,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.UUID as U
 import GHC.Generics
 
-import Shared.Model.Config.SimpleFeature
+import Shared.Api.Resource.Bootstrap.BootstrapCommonDTO
 import Shared.Model.Settings.Settings
 
 data WorkspaceBootstrapDTO = WorkspaceBootstrapDTO
@@ -14,7 +14,7 @@ data WorkspaceBootstrapDTO = WorkspaceBootstrapDTO
   , dashboardAndMenu :: SettingsDashboardAndMenu
   , projects :: SettingsProjects
   , support :: SettingsSupport
-  , submission :: SimpleFeature
+  , submission :: BootstrapSubmissionDTO
   , disabledPlugins :: [U.UUID]
   , pluginSettings :: M.Map U.UUID A.Value
   }

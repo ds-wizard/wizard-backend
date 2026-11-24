@@ -71,3 +71,9 @@ defaultSettingsSupport =
 
 defaultSettingsSubmission :: SettingsSubmission
 defaultSettingsSubmission = SettingsSubmission {enabled = False, definitions = []}
+
+defaultSettingsZenodo :: SettingsZenodo
+defaultSettingsZenodo = SettingsZenodo {sandbox = defaultSettingsZenodoRepository, production = defaultSettingsZenodoRepository}
+
+defaultSettingsZenodoRepository :: SettingsZenodoRepository
+defaultSettingsZenodoRepository = SettingsZenodoRepository {enabled = False, clientId = "", clientSecret = ""}

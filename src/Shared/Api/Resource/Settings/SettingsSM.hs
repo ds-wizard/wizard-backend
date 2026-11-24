@@ -116,3 +116,12 @@ instance ToSchema SettingsSubmissionServiceRequestMultipart where
 instance ToSchema SettingsAnnouncementLevelType
 
 instance ToSchema ProjectCreation
+
+instance ToSchema SettingsZenodo where
+  declareNamedSchema = toSwagger defaultSettingsZenodo
+
+instance ToSchema (SettingsDTO SettingsZenodo) where
+  declareNamedSchema = toSwaggerWithDtoName "SettingsZenodoDTO" (SettingsDTO defaultSettingsZenodo Nothing Nothing)
+
+instance ToSchema SettingsZenodoRepository where
+  declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)

@@ -67,6 +67,7 @@ import qualified Shared.Database.Migration.Development.UserEmailLink.UserEmailLi
 import qualified Shared.Database.Migration.Development.Websocket.WebsocketSchemaMigration as Websocket
 import Shared.Database.Migration.Development.Workspace.Data.Workspaces
 import qualified Shared.Database.Migration.Development.Workspace.WorkspaceSchemaMigration as Workspace
+import qualified Shared.Database.Migration.Development.Zenodo.ZenodoSchemaMigration as Zenodo
 import Shared.Model.Cache.ServerCache
 import Shared.Model.Tenant.Config.TenantConfigMail
 import Shared.Model.Tenant.Config.TenantConfigMailDM
@@ -100,6 +101,7 @@ buildSchema requestContext = do
   runInContext Prefab.dropTables requestContext
   runInContext PersistentCommand.dropTables requestContext
   runInContext Submission.dropTables requestContext
+  runInContext Zenodo.dropTables requestContext
   runInContext UserEmailLink.dropTables requestContext
   runInContext Mcp.dropTables requestContext
   runInContext KnowledgeModelMigration.dropTables requestContext
@@ -158,6 +160,7 @@ buildSchema requestContext = do
   runInContext Document.createTables requestContext
   runInContext KnowledgeModelMigration.createTables requestContext
   runInContext Submission.createTables requestContext
+  runInContext Zenodo.createTables requestContext
   runInContext PersistentCommand.createTables requestContext
   runInContext Prefab.createTables requestContext
   runInContext TelemetryEvent.createTables requestContext
@@ -247,10 +250,13 @@ deleteAllEntitiesSql =
     , "telemetry_event"
     , "prefab"
     , "persistent_command"
+    , "zenodo_oauth_session"
+    , "user_zenodo_credential"
     , "submission_document"
     , "submission"
     , "config_mail"
     , "settings_features"
+    , "settings_zenodo"
     , "settings_submission_definition_export"
     , "settings_submission_definition"
     , "settings_submission"

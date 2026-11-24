@@ -35,6 +35,7 @@ bootstrapSettingsExample =
     , lookAndFeel = defaultSettingsLookAndFeel
     , users = defaultSettingsUsers
     , registry = defaultSettingsRegistry
+    , zenodo = defaultSettingsZenodo
     }
 
 instance ToSchema BootstrapDTO where

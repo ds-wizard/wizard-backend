@@ -8,12 +8,12 @@ import qualified Data.UUID as U
 import Shared.Api.Resource.Bootstrap.BootstrapCommonDTO
 import Shared.Api.Resource.Bootstrap.WorkspaceBootstrapDTO
 import Shared.Model.Config.ServerConfig
-import Shared.Model.Config.SimpleFeature
 import Shared.Model.Plugin.EffectivePlugin
 import Shared.Model.Plugin.Plugin
 import Shared.Model.Plugin.PluginList
 import Shared.Model.Settings.Settings
 import Shared.Model.Tenant.Tenant
+import Shared.Model.Zenodo.ZenodoRepository
 import Shared.Service.Tenant.TenantMapper (tenantServerUrl)
 
 toPrivacyDTO :: Maybe String -> Maybe String -> BootstrapPrivacyDTO
@@ -29,15 +29,18 @@ toBootstrapPlugins signedIn plugins pluginSettings =
     , pluginSettings = if signedIn then M.restrictKeys pluginSettings (S.fromList [p.uuid | p <- plugins, p.enabled]) else M.empty
     }
 
-toWorkspaceBootstrapDTO :: SettingsLookAndFeel -> SettingsDashboardAndMenu -> SettingsProjects -> SettingsSupport -> SettingsSubmission -> [EffectivePlugin] -> WorkspaceBootstrapDTO
-toWorkspaceBootstrapDTO lookAndFeel dashboardAndMenu projects support submission effectivePlugins =
+toBootstrapSubmissionDTO :: SettingsSubmission -> SettingsZenodo -> BootstrapSubmissionDTO
+toBootstrapSubmissionDTO submission zenodo = BootstrapSubmissionDTO {enabled = submission.enabled, zenodoRepositories = availableZenodoRepositories zenodo}
+
+toWorkspaceBootstrapDTO :: SettingsLookAndFeel -> SettingsDashboardAndMenu -> SettingsProjects -> SettingsSupport -> SettingsSubmission -> SettingsZenodo -> [EffectivePlugin] -> WorkspaceBootstrapDTO
+toWorkspaceBootstrapDTO lookAndFeel dashboardAndMenu projects support submission zenodo effectivePlugins =
   WorkspaceBootstrapDTO
     { logoUrl = lookAndFeel.logoUrl
     , primaryColor = lookAndFeel.primaryColor
     , dashboardAndMenu = dashboardAndMenu
     , projects = projects
     , support = support
-    , submission = SimpleFeature submission.enabled
+    , submission = toBootstrapSubmissionDTO submission zenodo
     , disabledPlugins = [p.plugin.uuid | p <- effectivePlugins, not p.enabled]
     , pluginSettings = M.fromList [(p.plugin.uuid, values) | p <- effectivePlugins, p.enabled, Just values <- [p.values]]
     }

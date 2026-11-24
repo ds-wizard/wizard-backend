@@ -28,6 +28,7 @@ import Shared.Api.Handler.ProjectCommentThread.Api
 import Shared.Api.Handler.ProjectFile.Api
 import Shared.Api.Handler.Settings.Api
 import Shared.Api.Handler.Submission.Api
+import Shared.Api.Handler.Zenodo.Api
 import Shared.Api.Handler.Token.Api
 import Shared.Api.Handler.TypeHint.Api
 import Shared.Api.Handler.UserGroup.Api
@@ -77,6 +78,7 @@ type ApplicationAPI =
     :<|> RoleAPI
     :<|> SettingsAPI
     :<|> SettingsRegistryAPI
+    :<|> SettingsZenodoAPI
     :<|> SubmissionAPI
     :<|> TenantAPI
     :<|> TokenAPI
@@ -86,6 +88,7 @@ type ApplicationAPI =
     :<|> UserGroupAPI
     :<|> UserSubmissionPropsAPI
     :<|> WorkspaceAPI
+    :<|> ZenodoAPI
 
 applicationApi :: Proxy ApplicationAPI
 applicationApi = Proxy
@@ -123,6 +126,7 @@ applicationServer =
     :<|> roleServer
     :<|> settingsServer
     :<|> settingsRegistryServer
+    :<|> settingsZenodoServer
     :<|> submissionServer
     :<|> tenantServer
     :<|> tokenServer
@@ -132,3 +136,4 @@ applicationServer =
     :<|> userGroupServer
     :<|> userSubmissionPropsServer
     :<|> workspaceServer
+    :<|> zenodoServer

@@ -237,3 +237,21 @@ instance ToJSON ProjectCreation
 
 instance JsonSchema ProjectCreation where
   jsonSchema = genericJsonSchema defaultOptions
+
+instance FromJSON SettingsZenodo where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON SettingsZenodo where
+  toJSON = genericToJSON jsonOptions
+
+instance JsonSchema SettingsZenodo where
+  jsonSchema = genericJsonSchema jsonOptions
+
+instance FromJSON SettingsZenodoRepository where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON SettingsZenodoRepository where
+  toJSON = genericToJSON jsonOptions
+
+instance JsonSchema SettingsZenodoRepository where
+  jsonSchema = genericJsonSchema jsonOptions

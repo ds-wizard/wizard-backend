@@ -12,7 +12,7 @@ import WizardServer.Database.Migration.Production.Migration_5_0_0.Migration (run
 
 definition = (meta, migrate)
 
-meta = MigrationMeta {mmNumber = 5002000, mmName = "Submission definitions", mmDescription = "Replace submission services with named submission definitions and submit projects"}
+meta = MigrationMeta {mmNumber = 5002000, mmName = "Submission definitions", mmDescription = "Replace submission services with named submission definitions, submit projects and connect Zenodo"}
 
 migrate :: Pool Connection -> LoggingT IO (Maybe Error)
 migrate dbPool = do
@@ -21,6 +21,7 @@ migrate dbPool = do
   dropSubmissionServiceTables dbPool
   migrateSubmissionsToProjects dbPool
   createSubmissionTrigger dbPool
+  createZenodoTables dbPool
   return Nothing
 
 createSubmissionDefinitionTables :: Pool Connection -> LoggingT IO ()
@@ -216,4 +217,58 @@ CREATE TRIGGER trg_document_after_state_update_submission
     FOR EACH ROW
     WHEN (OLD.state IS DISTINCT FROM NEW.state AND NEW.state IN ('DoneDocumentState', 'ErrorDocumentState'))
 EXECUTE FUNCTION create_submission_command_on_document_finished();
+|]
+
+createZenodoTables :: Pool Connection -> LoggingT IO ()
+createZenodoTables dbPool =
+  runSql
+    dbPool
+    [r|
+CREATE TABLE settings_zenodo
+(
+    tenant_uuid              uuid        NOT NULL,
+    sandbox_enabled          boolean     NOT NULL,
+    sandbox_client_id        varchar     NOT NULL,
+    sandbox_client_secret    varchar     NOT NULL,
+    production_enabled       boolean     NOT NULL,
+    production_client_id     varchar     NOT NULL,
+    production_client_secret varchar     NOT NULL,
+    created_at               timestamptz NOT NULL,
+    updated_at               timestamptz NOT NULL,
+    CONSTRAINT settings_zenodo_pk PRIMARY KEY (tenant_uuid),
+    CONSTRAINT settings_zenodo_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
+);
+
+INSERT INTO settings_zenodo (tenant_uuid, sandbox_enabled, sandbox_client_id, sandbox_client_secret, production_enabled, production_client_id, production_client_secret, created_at, updated_at)
+SELECT uuid, false, '', '', false, '', '', now(), now()
+FROM tenant;
+
+CREATE TABLE user_zenodo_credential
+(
+    user_uuid     uuid        NOT NULL,
+    repository    varchar     NOT NULL,
+    access_token  varchar     NOT NULL,
+    refresh_token varchar,
+    scope         varchar     NOT NULL,
+    expires_at    timestamptz,
+    tenant_uuid   uuid        NOT NULL,
+    created_at    timestamptz NOT NULL,
+    updated_at    timestamptz NOT NULL,
+    CONSTRAINT user_zenodo_credential_pk PRIMARY KEY (user_uuid, repository),
+    CONSTRAINT user_zenodo_credential_user_uuid_fk FOREIGN KEY (user_uuid) REFERENCES user_entity (uuid) ON DELETE CASCADE,
+    CONSTRAINT user_zenodo_credential_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
+);
+
+CREATE TABLE zenodo_oauth_session
+(
+    state         varchar     NOT NULL,
+    user_uuid     uuid        NOT NULL,
+    repository    varchar     NOT NULL,
+    code_verifier varchar     NOT NULL,
+    tenant_uuid   uuid        NOT NULL,
+    created_at    timestamptz NOT NULL,
+    CONSTRAINT zenodo_oauth_session_pk PRIMARY KEY (state),
+    CONSTRAINT zenodo_oauth_session_user_uuid_fk FOREIGN KEY (user_uuid) REFERENCES user_entity (uuid) ON DELETE CASCADE,
+    CONSTRAINT zenodo_oauth_session_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
+);
 |]

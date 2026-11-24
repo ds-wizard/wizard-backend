@@ -98,6 +98,17 @@ loginScreenChanges old new =
 registryChanges :: SettingsRegistry -> SettingsRegistry -> AuditLogSettingsChanges
 registryChanges old new = noSettingsChanges {enabled = change old.enabled new.enabled} :: AuditLogSettingsChanges
 
+zenodoChanges :: SettingsZenodo -> SettingsZenodo -> AuditLogSettingsChanges
+zenodoChanges old new =
+  noSettingsChanges
+    { sandbox = change (redactZenodoSecret old.sandbox) (redactZenodoSecret new.sandbox)
+    , production = change (redactZenodoSecret old.production) (redactZenodoSecret new.production)
+    }
+    :: AuditLogSettingsChanges
+
+redactZenodoSecret :: SettingsZenodoRepository -> SettingsZenodoRepository
+redactZenodoSecret repository = repository {clientSecret = if null repository.clientSecret then "" else "***"}
+
 featuresChanges :: SettingsFeatures -> SettingsFeatures -> AuditLogSettingsChanges
 featuresChanges old new =
   noSettingsChanges

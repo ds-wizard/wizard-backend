@@ -169,6 +169,20 @@ data ZenodoRepository
   | ProductionZenodoRepository
   deriving (Generic, Eq, Show, Read, Ord, Enum, Bounded)
 
+-- OAuth applications registered in Zenodo (one per repository), used to connect the accounts of the users
+data SettingsZenodo = SettingsZenodo
+  { sandbox :: SettingsZenodoRepository
+  , production :: SettingsZenodoRepository
+  }
+  deriving (Generic, Eq, Show)
+
+data SettingsZenodoRepository = SettingsZenodoRepository
+  { enabled :: Bool
+  , clientId :: String
+  , clientSecret :: String
+  }
+  deriving (Generic, Eq, Show)
+
 data SettingsSubmissionServiceRequest = SettingsSubmissionServiceRequest
   { method :: String
   , url :: String

@@ -14,9 +14,11 @@ import Shared.Database.DAO.Settings.SettingsRolesDAO
 import Shared.Database.DAO.Settings.SettingsSubmissionDAO
 import Shared.Database.DAO.Settings.SettingsSupportDAO
 import Shared.Database.DAO.Settings.SettingsUsersDAO
+import Shared.Database.DAO.Settings.SettingsZenodoDAO
 import Shared.Database.Migration.Development.Settings.Data.Settings
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Settings.Settings
+import Shared.Model.Settings.SettingsDM
 
 seedSettings :: WizardRequestContextC s m => U.UUID -> m ()
 seedSettings tenantUuid = do
@@ -31,6 +33,7 @@ seedSettings tenantUuid = do
   saveSettingsProjects tenantUuid Nothing settingsProjects
   saveSettingsSupport tenantUuid Nothing settingsSupport
   saveSettingsSubmission tenantUuid Nothing (settingsSubmission {definitions = []})
+  saveSettingsZenodo tenantUuid defaultSettingsZenodo
 
 seedSettingsSubmissionDefinition :: WizardRequestContextC s m => m ()
 seedSettingsSubmissionDefinition = saveSettingsSubmission defaultTenantUuid Nothing settingsSubmission
