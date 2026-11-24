@@ -22,6 +22,7 @@ import qualified Data.UUID as U
 import Shared.Database.DAO.Submission.SubmissionDAO
 import Shared.Database.DAO.User.UserDAO
 import Shared.Integration.Http.Zenodo.ZenodoRecords
+import Shared.Model.Context.RequestContextHelpers (withSavepoint)
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Document.Document
 import Shared.Model.Project.Project
@@ -35,6 +36,7 @@ import Shared.Service.Tenant.TenantHelper (getClientUrl)
 import Shared.Model.OAuth.OAuthProvider
 import Shared.Service.OAuth.OAuthService
 import Shared.Service.Zenodo.ZenodoMetadataMapper
+import Shared.Util.Error (tryError)
 
 data ZenodoTarget = ZenodoTarget
   { repository :: ZenodoRepository
@@ -65,7 +67,13 @@ submitToZenodo submission target project documents =
           case eDraft of
             Left error -> return (Left error)
             Right (recordId, createdNew) -> do
-              result <- fillDraft client target recordId (zip keys files) payload reducedPayload
+              -- An exception (not only an error Zenodo returned) must not leave the draft behind either
+              eResult <- withSavepoint (const True) (tryError (fillDraft client target recordId (zip keys files) payload reducedPayload))
+              let result =
+                    case eResult of
+                      Right (Right fillResult) -> fillResult
+                      Right (Left appError) -> Left (show appError)
+                      Left message -> Left message
               case result of
                 Left error -> do
                   -- Do not leave an empty draft behind; drafts of previous submissions are kept

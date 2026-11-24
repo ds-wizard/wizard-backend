@@ -29,6 +29,7 @@ import qualified Shared.Database.Migration.Development.User.UserMigration as USR
 import Shared.Model.Document.Document
 import Shared.Model.PersistentCommand.PersistentCommand
 import Shared.Model.Submission.Submission
+import Shared.Model.Submission.SubmissionList
 import Shared.Service.Submission.SubmissionMapper
 import Shared.Service.Submission.SubmissionService
 import WizardServer.Model.Context.RequestContext
@@ -54,6 +55,13 @@ submissionServiceSpec requestContext =
         submission <- findSubmission requestContext
         submission.state `shouldBe` ErrorSubmissionState
         submission.returnedData `shouldBe` Just ("The document '" ++ doc4.name ++ "' could not be generated")
+      it "fails the submission if one of its documents was deleted" $ do
+        prepare requestContext [doc1, doc6]
+        runInContext' (deleteDocumentByUuid doc6.uuid) requestContext
+        runInContext' (finishSubmission inProgressSubmission.uuid) requestContext
+        submission <- findSubmission requestContext
+        submission.state `shouldBe` ErrorSubmissionState
+        submission.returnedData `shouldBe` Just "A document of the submission was deleted"
       it "does nothing if the submission is already finished" $ do
         prepare requestContext [doc4]
         runInContext' (updateSubmissionByUuid (inProgressSubmission {state = DoneSubmissionState} :: Submission)) requestContext
@@ -67,6 +75,21 @@ submissionServiceSpec requestContext =
         runInContext' (saveSettingsSubmission defaultTenantUuid Nothing (settingsSubmission {definitions = [settingsSubmissionZenodoDefinition]})) requestContext
         result <- runInContext (createSubmission project1.uuid (SubmissionCreateDTO settingsSubmissionZenodoDefinition.sId)) requestContext
         result `shouldBe` Left (UserError (_ERROR_SERVICE_SUBMISSION__NOT_CONNECTED "Zenodo Sandbox"))
+    describe "timeOutSubmissions" $
+      it "fails the submissions in progress for too long" $ do
+        prepare requestContext [doc6]
+        runInContext' (timeOutSubmissions 0) requestContext
+        submission <- findSubmission requestContext
+        submission.state `shouldBe` ErrorSubmissionState
+        submission.returnedData `shouldBe` Just "The submission timed out"
+    describe "createSubmission (export flags)" $
+      it "keeps the maDMP flag of each export with its document" $ do
+        prepare requestContext [doc1]
+        runInContext' deleteSubmissions requestContext
+        runInContext' (saveSettingsSubmission defaultTenantUuid Nothing (settingsSubmission {definitions = [settingsSubmissionDefinition {exports = [settingsSubmissionExport {madmpMetadata = True}]} :: SettingsSubmissionDefinition]})) requestContext
+        created <- runInContext' (createSubmission project1.uuid (SubmissionCreateDTO settingsSubmissionDefinition.sId)) requestContext
+        submissionDocuments <- runInContext' (findSubmissionDocuments created.uuid) requestContext
+        fmap (.madmpMetadata) submissionDocuments `shouldBe` [True]
     describe "document trigger" $
       it "creates a submission command when a document of a submission in progress is finished" $ do
         prepare requestContext [doc6]
@@ -90,7 +113,7 @@ prepare requestContext documents = do
   runInContext' seedSettingsSubmissionDefinition requestContext
   runInContext' deleteSubmissions requestContext
   runInContext' (insertSubmission inProgressSubmission) requestContext
-  runInContext' (insertSubmissionDocuments (toSubmissionDocuments inProgressSubmission.uuid inProgressSubmission.tenantUuid (fmap (.uuid) documents))) requestContext
+  runInContext' (insertSubmissionDocuments (toSubmissionDocuments inProgressSubmission.uuid inProgressSubmission.tenantUuid (fmap (\d -> (d.uuid, False)) documents))) requestContext
 
 findSubmission requestContext = runInContext' (findSubmissionByUuid inProgressSubmission.uuid) requestContext
 

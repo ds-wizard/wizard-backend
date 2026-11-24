@@ -102,8 +102,8 @@ create_test_201 title requestContext project authHeader user =
       -- AND: Find result in DB and compare with expectation state
       assertCountInDB findSubmissions requestContext 1
       submissions <- getOneFromDB findSubmissions requestContext
-      documentUuids <- getOneFromDB (findSubmissionDocumentUuids (head submissions).uuid) requestContext
-      liftIO $ length documentUuids `shouldBe` 1
+      submissionDocuments <- getOneFromDB (findSubmissionDocuments (head submissions).uuid) requestContext
+      liftIO $ length submissionDocuments `shouldBe` 1
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------

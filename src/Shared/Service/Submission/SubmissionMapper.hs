@@ -51,8 +51,9 @@ fromCreate uuid definitionId projectUuid tenantUuid createdBy now =
     , updatedAt = now
     }
 
-toSubmissionDocuments :: U.UUID -> U.UUID -> [U.UUID] -> [SubmissionDocument]
-toSubmissionDocuments submissionUuid tenantUuid documentUuids =
-  [ SubmissionDocument {submissionUuid = submissionUuid, documentUuid = documentUuid, position = position, tenantUuid = tenantUuid}
-  | (position, documentUuid) <- zip [0 ..] documentUuids
+-- The documents with the maDMP flags of their exports, in the order of the exports
+toSubmissionDocuments :: U.UUID -> U.UUID -> [(U.UUID, Bool)] -> [SubmissionDocument]
+toSubmissionDocuments submissionUuid tenantUuid documents =
+  [ SubmissionDocument {submissionUuid = submissionUuid, position = position, documentUuid = Just documentUuid, madmpMetadata = madmpMetadata, tenantUuid = tenantUuid}
+  | (position, (documentUuid, madmpMetadata)) <- zip [0 ..] documents
   ]

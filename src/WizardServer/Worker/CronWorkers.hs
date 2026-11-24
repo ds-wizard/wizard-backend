@@ -4,7 +4,7 @@ import Control.Monad (void)
 import Control.Monad.Reader (asks)
 
 import Shared.Database.DAO.OpenId.OpenIdClientSessionDAO
-import Shared.Database.DAO.Submission.SubmissionDAO (failTimedOutSubmissions)
+import Shared.Service.Submission.SubmissionService (timeOutSubmissions)
 import Shared.Database.DAO.OAuth.OAuthSessionDAO (deleteExpiredOAuthSessions)
 import Shared.Database.VacuumCleaner
 import Shared.Model.Cache.ServerCache
@@ -75,7 +75,7 @@ submissionTimeoutWorker =
     , cron = (.serverConfig'.submission.timeoutJob.cron)
     , function = do
         timeoutInMinutes <- asks (.serverConfig'.submission.timeoutInMinutes)
-        void $ failTimedOutSubmissions timeoutInMinutes
+        timeOutSubmissions timeoutInMinutes
     , wrapInTransaction = True
     }
 

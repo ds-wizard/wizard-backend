@@ -2,7 +2,7 @@ module Shared.Service.Submission.SubmissionService where
 
 import Control.Monad (forM, forM_, unless)
 import Control.Monad.Except (throwError)
-import Control.Monad.Reader (asks, liftIO)
+import Control.Monad.Reader (asks, liftIO, local)
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import Data.Maybe (catMaybes, listToMaybe)
@@ -22,6 +22,7 @@ import Shared.Database.DAO.Project.ProjectDAO
 import Shared.Database.DAO.Submission.SubmissionDAO
 import Shared.Database.DAO.WizardCommon
 import Shared.Integration.Http.Submission.Runner
+import Shared.Localization.Locale (toLocaleMessage)
 import Shared.Localization.Messages.Public
 import Shared.Localization.Messages.WizardPublic
 import Shared.Model.Automation.AutomationEvent
@@ -58,6 +59,7 @@ import Shared.Service.Settings.WorkspaceSettingsService
 import Shared.Service.Submission.SubmissionMapper
 import Shared.Service.User.Profile.UserProfileService
 import Shared.Service.Zenodo.ZenodoSubmitter
+import Shared.Util.Error (tryError)
 import Shared.Util.JSON
 import Shared.Util.Uuid
 
@@ -140,27 +142,57 @@ createSubmission projectUuid reqDto =
     now <- liftIO getCurrentTime
     let submission = fromCreate submissionUuid definition.sId project.uuid project.tenantUuid (Just currentUser.uuid) now
     insertSubmission submission
-    insertSubmissionDocuments (toSubmissionDocuments submission.uuid project.tenantUuid (fmap (.uuid) documents))
+    insertSubmissionDocuments (toSubmissionDocuments submission.uuid project.tenantUuid (zip (fmap (.uuid) documents) (fmap (.export.madmpMetadata) exports)))
     commandUuid <- liftIO generateUuid
     let body = encodeJsonToString (TriggerEntityUuidCommand {uuid = submission.uuid})
-    insertPersistentCommand (toPersistentCommand commandUuid submissionComponent submissionSubmitFunction body 3 project.tenantUuid (Just currentUser.uuid) now)
+    insertPersistentCommand (toPersistentCommand commandUuid submissionComponent submissionSubmitFunction body 1 project.tenantUuid (Just currentUser.uuid) now)
     mSubmissionList <- findSubmissionListByUuid submission.uuid
     maybe (throwError . GeneralServerError $ "Submission was not created") return mSubmissionList
 
 -- Called by the submission command (as the user who created the submission) whenever one of its documents is finished
+-- Called by the submission command (as the user who created the submission) whenever one of its documents is finished.
+-- The submission row is locked until the end of the transaction, so that two commands finishing at once (two documents
+-- done together) cannot both send it. Any error while sending (an exception included) fails the submission instead of
+-- failing the command, so that the command is never retried after a part was already sent.
 finishSubmission :: WizardRequestContextC s m => U.UUID -> m ()
-finishSubmission submissionUuid = do
-  mSubmission <- lockSubmissionByUuid submissionUuid
-  case mSubmission of
-    Just submission | submission.state == InProgressSubmissionState -> do
-      documents <- traverse findDocumentByUuid =<< findSubmissionDocumentUuids submission.uuid
-      case (documents, L.find ((== ErrorDocumentState) . (.state)) documents) of
-        ([], _) -> failSubmission submission documents "The documents of the submission were deleted"
-        (_, Just failed) -> failSubmission submission documents ("The document '" ++ failed.name ++ "' could not be generated")
-        _
-          | any isPendingDocument documents -> return ()
-          | otherwise -> sendSubmission submission documents
-    _ -> return ()
+finishSubmission submissionUuid =
+  runInTransaction $ do
+    mSubmission <- lockSubmissionByUuid submissionUuid
+    case mSubmission of
+      Just submission | submission.state == InProgressSubmissionState -> do
+        submissionDocuments <- findSubmissionDocuments submission.uuid
+        case traverse (.documentUuid) submissionDocuments of
+          Nothing -> failSubmission submission "A document of the submission was deleted"
+          Just [] -> failSubmission submission "The submission has no documents"
+          Just documentUuids -> do
+            documents <- traverse findDocumentByUuid documentUuids
+            case L.find ((== ErrorDocumentState) . (.state)) documents of
+              Just failed -> failSubmission submission ("The document '" ++ failed.name ++ "' could not be generated")
+              Nothing
+                | any isPendingDocument documents -> return ()
+                | otherwise -> do
+                    result <- withSavepoint (either (const False) (const True)) (tryError (sendSubmission submission (zip documents (fmap (.madmpMetadata) submissionDocuments))))
+                    case result of
+                      Right (Right ()) -> return ()
+                      Right (Left appError) -> failSubmission submission ("The submission failed: " ++ appErrorMessage appError)
+                      Left message -> failSubmission submission ("The submission failed: " ++ message)
+      _ -> return ()
+
+-- Fails the submissions still in progress after the timeout (cron worker, across all tenants)
+timeOutSubmissions :: WizardRequestContextC s m => Int -> m ()
+timeOutSubmissions timeoutInMinutes = do
+  submissions <- failTimedOutSubmissions timeoutInMinutes
+  forM_ submissions $ \submission ->
+    local (setTenantUuid submission.tenantUuid) $ do
+      project <- findProjectByUuid submission.projectUuid
+      emitEvent (ProjectSubmissionFailedEvent project submission submission.returnedData)
+
+appErrorMessage :: AppError -> String
+appErrorMessage (UserError record) = toLocaleMessage record
+appErrorMessage (NotExistsError record) = toLocaleMessage record
+appErrorMessage (ForbiddenError record) = toLocaleMessage record
+appErrorMessage (GeneralServerError message) = message
+appErrorMessage _ = "An unexpected error occurred"
 
 -- --------------------------------
 -- PRIVATE
@@ -236,12 +268,13 @@ toDefinitionDTO definition mConnection exports =
     , connectOnSubmit = definition.connectOnSubmit
     }
 
-sendSubmission :: WizardRequestContextC s m => Submission -> [Document] -> m ()
-sendSubmission submission documents = do
+sendSubmission :: WizardRequestContextC s m => Submission -> [(Document, Bool)] -> m ()
+sendSubmission submission documentsWithFlags = do
+  let documents = fmap fst documentsWithFlags
   project <- findProjectByUuid submission.projectUuid
   settings <- getEffectiveSettingsSubmission (Just project.workspaceUuid)
   case findDefinition submission.definitionId settings of
-    Nothing -> failSubmission submission documents "The submission definition does not exist anymore"
+    Nothing -> failSubmission submission "The submission definition does not exist anymore"
     Just definition -> do
       result <-
         case definition.target of
@@ -251,7 +284,7 @@ sendSubmission submission documents = do
               submission
               ZenodoTarget {repository = repository, resourceType = resourceType, licenseId = licenseId, accessLevel = accessLevel, community = community}
               project
-              (zip documents (fmap (.madmpMetadata) definition.exports ++ repeat False))
+              documentsWithFlags
       case result of
         Right SubmissionResult {..} -> do
           let updated = submission {state = DoneSubmissionState, location = location, returnedData = returnedData, externalId = externalId, targetBaseUrl = targetBaseUrl} :: Submission
@@ -264,8 +297,8 @@ sendSubmission submission documents = do
           forM_ documents (\document -> al_submitDocument document definition saved)
           emitEvent (ProjectSubmissionFailedEvent project saved (Just error))
 
-failSubmission :: WizardRequestContextC s m => Submission -> [Document] -> String -> m ()
-failSubmission submission _ error = do
+failSubmission :: WizardRequestContextC s m => Submission -> String -> m ()
+failSubmission submission error = do
   project <- findProjectByUuid submission.projectUuid
   saved <- updateSubmissionByUuid (submission {state = ErrorSubmissionState, returnedData = Just error} :: Submission)
   emitEvent (ProjectSubmissionFailedEvent project saved (Just error))

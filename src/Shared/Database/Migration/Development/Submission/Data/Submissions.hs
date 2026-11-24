@@ -66,7 +66,7 @@ submission1 =
     }
 
 submission1Documents :: [SubmissionDocument]
-submission1Documents = [SubmissionDocument {submissionUuid = submission1.uuid, documentUuid = doc1.uuid, position = 0, tenantUuid = defaultTenant.uuid}]
+submission1Documents = [SubmissionDocument {submissionUuid = submission1.uuid, position = 0, documentUuid = Just doc1.uuid, madmpMetadata = False, tenantUuid = defaultTenant.uuid}]
 
 submission1List :: SubmissionList
 submission1List = toList submission1 (Just settingsSubmissionDefinition) [doc1] (Just userAlbertSuggestion)
@@ -89,4 +89,4 @@ differentSubmission1 =
     }
 
 differentSubmission1Documents :: [SubmissionDocument]
-differentSubmission1Documents = [SubmissionDocument {submissionUuid = differentSubmission1.uuid, documentUuid = differentDoc.uuid, position = 0, tenantUuid = differentTenant.uuid}]
+differentSubmission1Documents = [SubmissionDocument {submissionUuid = differentSubmission1.uuid, position = 0, documentUuid = Just differentDoc.uuid, madmpMetadata = False, tenantUuid = differentTenant.uuid}]

@@ -34,6 +34,15 @@ findUserOAuthCredential userUuid provider = do
   logQuery sql params
   listToMaybe <$> runDB (\conn -> query conn sql params)
 
+-- Locks the credential until the end of the transaction (two submissions refreshing the same token wait for each other)
+findUserOAuthCredentialForUpdate :: WizardRequestContextC s m => U.UUID -> String -> m (Maybe UserOAuthCredential)
+findUserOAuthCredentialForUpdate userUuid provider = do
+  tenantUuid <- asks (.tenantUuid')
+  let sql = fromString $ "SELECT " ++ credentialColumns ++ " FROM user_oauth_credential WHERE tenant_uuid = ? AND user_uuid = ? AND provider = ? FOR UPDATE"
+  let params = [toField tenantUuid, toField userUuid, toField provider]
+  logQuery sql params
+  listToMaybe <$> runDB (\conn -> query conn sql params)
+
 saveUserOAuthCredential :: WizardRequestContextC s m => UserOAuthCredential -> m Int64
 saveUserOAuthCredential credential = do
   let sql =
@@ -52,6 +61,15 @@ deleteUserOAuthCredential userUuid provider = do
   tenantUuid <- asks (.tenantUuid')
   let sql = "DELETE FROM user_oauth_credential WHERE tenant_uuid = ? AND user_uuid = ? AND provider = ?"
   let params = [toField tenantUuid, toField userUuid, toField provider]
+  logQuery sql params
+  void $ runDB (\conn -> execute conn sql params)
+
+-- All the credentials of a provider (whatever configuration of it they were issued by)
+deleteUserOAuthCredentialsOfProvider :: WizardRequestContextC s m => U.UUID -> String -> m ()
+deleteUserOAuthCredentialsOfProvider userUuid providerKey = do
+  tenantUuid <- asks (.tenantUuid')
+  let sql = "DELETE FROM user_oauth_credential WHERE tenant_uuid = ? AND user_uuid = ? AND (provider = ? OR left(provider, length(?) + 1) = ? || '#')"
+  let params = [toField tenantUuid, toField userUuid, toField providerKey, toField providerKey, toField providerKey]
   logQuery sql params
   void $ runDB (\conn -> execute conn sql params)
 

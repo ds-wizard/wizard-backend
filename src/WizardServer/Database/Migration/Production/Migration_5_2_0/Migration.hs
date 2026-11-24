@@ -155,12 +155,13 @@ ALTER TABLE submission
 CREATE TABLE submission_document
 (
     submission_uuid uuid    NOT NULL,
-    document_uuid   uuid    NOT NULL,
     position        integer NOT NULL,
+    document_uuid   uuid,
+    madmp_metadata  boolean NOT NULL DEFAULT false,
     tenant_uuid     uuid    NOT NULL,
-    CONSTRAINT submission_document_pk PRIMARY KEY (submission_uuid, document_uuid),
+    CONSTRAINT submission_document_pk PRIMARY KEY (submission_uuid, position),
     CONSTRAINT submission_document_submission_uuid_fk FOREIGN KEY (submission_uuid) REFERENCES submission (uuid) ON DELETE CASCADE,
-    CONSTRAINT submission_document_document_uuid_fk FOREIGN KEY (document_uuid) REFERENCES document (uuid) ON DELETE CASCADE,
+    CONSTRAINT submission_document_document_uuid_fk FOREIGN KEY (document_uuid) REFERENCES document (uuid) ON DELETE SET NULL,
     CONSTRAINT submission_document_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
 );
 
@@ -171,8 +172,8 @@ SET project_uuid = document.project_uuid
 FROM document
 WHERE document.uuid = submission.document_uuid;
 
-INSERT INTO submission_document (submission_uuid, document_uuid, position, tenant_uuid)
-SELECT uuid, document_uuid, 0, tenant_uuid
+INSERT INTO submission_document (submission_uuid, position, document_uuid, madmp_metadata, tenant_uuid)
+SELECT uuid, 0, document_uuid, false, tenant_uuid
 FROM submission
 WHERE document_uuid IS NOT NULL AND project_uuid IS NOT NULL;
 
@@ -205,7 +206,7 @@ BEGIN
                  AND submission.state = 'InProgressSubmissionState'
     LOOP
         INSERT INTO persistent_command (uuid, state, component, function, body, last_error_message, attempts, max_attempts, tenant_uuid, created_by, created_at, updated_at, last_trace_uuid)
-        VALUES (gen_random_uuid(), 'NewPersistentCommandState', 'submission', 'submit', jsonb_build_object('uuid', sub.uuid), NULL, 0, 3, sub.tenant_uuid, sub.created_by, now(), now(), NULL);
+        VALUES (gen_random_uuid(), 'NewPersistentCommandState', 'submission', 'submit', jsonb_build_object('uuid', sub.uuid), NULL, 0, 1, sub.tenant_uuid, sub.created_by, now(), now(), NULL);
         PERFORM pg_notify('persistent_command_channel', '');
     END LOOP;
     RETURN NEW;

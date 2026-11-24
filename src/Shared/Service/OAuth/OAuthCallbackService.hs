@@ -8,10 +8,8 @@ module Shared.Service.OAuth.OAuthCallbackService (
 import Shared.Api.Resource.OAuth.OAuthConnectionDTO
 import Shared.Api.Resource.Submission.SubmissionCreateDTO
 import Shared.Database.DAO.WizardCommon
-import Shared.Localization.Locale (toLocaleMessage)
 import Shared.Model.Context.RequestContextHelpers
 import Shared.Model.Context.WizardRequestContext
-import Shared.Model.Error.Error
 import Shared.Model.OAuth.OAuthSession
 import Shared.Model.Submission.SubmissionList
 import Shared.Service.OAuth.OAuthService
@@ -39,9 +37,3 @@ completeOAuthAuthorization reqDto =
         , submissionUuid = eSubmission >>= either (const Nothing) (Just . (.uuid))
         , submissionError = eSubmission >>= either Just (const Nothing)
         }
-
-appErrorMessage :: AppError -> String
-appErrorMessage (UserError record) = toLocaleMessage record
-appErrorMessage (NotExistsError record) = toLocaleMessage record
-appErrorMessage (ForbiddenError record) = toLocaleMessage record
-appErrorMessage _ = "The submission could not be created."

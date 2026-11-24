@@ -130,13 +130,13 @@ findSubmissionLists condition params = do
   logQuery sql params
   runDB (\conn -> query conn sql params)
 
-findSubmissionDocumentUuids :: WizardRequestContextC s m => U.UUID -> m [U.UUID]
-findSubmissionDocumentUuids submissionUuid = do
+findSubmissionDocuments :: WizardRequestContextC s m => U.UUID -> m [SubmissionDocument]
+findSubmissionDocuments submissionUuid = do
   tenantUuid <- asks (.tenantUuid')
-  let sql = "SELECT document_uuid FROM submission_document WHERE tenant_uuid = ? AND submission_uuid = ? ORDER BY position"
+  let sql = "SELECT submission_uuid, position, document_uuid, madmp_metadata, tenant_uuid FROM submission_document WHERE tenant_uuid = ? AND submission_uuid = ? ORDER BY position"
   let params = [toField tenantUuid, toField submissionUuid]
   logQuery sql params
-  fmap fromOnly <$> runDB (\conn -> query conn sql params)
+  runDB (\conn -> query conn sql params)
 
 insertSubmission :: WizardRequestContextC s m => Submission -> m Int64
 insertSubmission submission = do
@@ -148,7 +148,7 @@ insertSubmission submission = do
 insertSubmissionDocuments :: WizardRequestContextC s m => [SubmissionDocument] -> m ()
 insertSubmissionDocuments submissionDocuments =
   forM_ submissionDocuments $ \submissionDocument -> do
-    let sql = "INSERT INTO submission_document (submission_uuid, document_uuid, position, tenant_uuid) VALUES (?, ?, ?, ?)"
+    let sql = "INSERT INTO submission_document (submission_uuid, position, document_uuid, madmp_metadata, tenant_uuid) VALUES (?, ?, ?, ?, ?)"
     let params = toRow submissionDocument
     logInsertAndUpdate sql params
     void $ runDB (\conn -> execute conn sql params)
@@ -176,16 +176,19 @@ updateSubmissionByUuid sub = do
   void $ runDB (\conn -> execute conn sql params)
   return updatedSub
 
--- Runs across all tenants (cron worker)
-failTimedOutSubmissions :: WizardRequestContextC s m => Int -> m Int64
+-- Runs across all tenants (cron worker); the submissions failed
+failTimedOutSubmissions :: WizardRequestContextC s m => Int -> m [Submission]
 failTimedOutSubmissions timeoutInMinutes = do
   let sql =
-        "UPDATE submission \
-        \SET state = 'ErrorSubmissionState', returned_data = 'The submission timed out', updated_at = now() \
-        \WHERE state = 'InProgressSubmissionState' AND created_at < now() - make_interval(mins => ?)"
+        fromString $
+          "UPDATE submission \
+          \SET state = 'ErrorSubmissionState', returned_data = 'The submission timed out', updated_at = now() \
+          \WHERE state = 'InProgressSubmissionState' AND created_at < now() - make_interval(mins => ?) \
+          \RETURNING "
+            ++ L.intercalate ", " submissionColumns
   let params = [toField timeoutInMinutes]
   logQuery sql params
-  runDB (\conn -> execute conn sql params)
+  runDB (\conn -> query conn sql params)
 
 deleteSubmissions :: WizardRequestContextC s m => m Int64
 deleteSubmissions = createDeleteEntitiesFn entityName

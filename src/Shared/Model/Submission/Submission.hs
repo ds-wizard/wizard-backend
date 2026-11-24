@@ -26,10 +26,13 @@ data Submission = Submission
   }
   deriving (Show, Eq, Generic)
 
+-- A document of a submission at the position of its export; the export's maDMP flag is kept, so that editing the
+-- definition later does not change how the document is sent (a deleted document leaves the row without a document)
 data SubmissionDocument = SubmissionDocument
   { submissionUuid :: U.UUID
-  , documentUuid :: U.UUID
   , position :: Int
+  , documentUuid :: Maybe U.UUID
+  , madmpMetadata :: Bool
   , tenantUuid :: U.UUID
   }
   deriving (Show, Eq, Generic)

@@ -51,7 +51,17 @@ instance FromRow Submission where
 instance ToRow SubmissionDocument where
   toRow SubmissionDocument {..} =
     [ toField submissionUuid
-    , toField documentUuid
     , toField position
+    , toField documentUuid
+    , toField madmpMetadata
     , toField tenantUuid
     ]
+
+instance FromRow SubmissionDocument where
+  fromRow = do
+    submissionUuid <- field
+    position <- field
+    documentUuid <- field
+    madmpMetadata <- field
+    tenantUuid <- field
+    return SubmissionDocument {..}

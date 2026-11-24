@@ -65,6 +65,9 @@ oauthServiceSpec requestContext =
         missingScopes config "user:email deposit:write deposit:actions" `shouldBe` []
       it "lists the missing scopes" $
         missingScopes config "deposit:write" `shouldBe` ["deposit:actions"]
+    describe "missingScopes (comma separated)" $
+      it "accepts scopes separated by commas" $
+        missingScopes (OAuthProviderConfig "GitHub" "" "" "" "" ["repo", "user"]) "repo,user" `shouldBe` []
     describe "extractZenodoErrorDetail" $ do
       it "flattens the error messages of Zenodo" $
         extractZenodoErrorDetail (BSL.pack "{\"message\":\"A validation error occurred.\",\"errors\":[{\"field\":\"metadata.title\",\"messages\":[\"Missing data for required field.\"]}]}")
@@ -125,14 +128,14 @@ oauthServiceSpec requestContext =
         "https://repository.example.org/oauth/authorize?" `L.isPrefixOf` authorization.url `shouldBe` True
         "scope=deposit" `L.isInfixOf` authorization.url `shouldBe` True
         let state = stateOf authorization.url
-        Just session <- run' (takeOAuthSession state) requestContext
+        Just session <- run' (takeOAuthSession state userAlbert.uuid defaultTenantUuid) requestContext
         (session.provider, session.returnUrl, session.projectUuid, session.definitionId, session.workspaceUuid)
           `shouldBe` ("submission:oauthRepository", Just "/projects/x/documents", Just project1.uuid, Just "oauthRepository", Just project1.workspaceUuid)
       it "drops a return URL to another site" $ do
         prepare requestContext
         authorization <- run' (authorizeOAuth (OAuthAuthorizeDTO zenodoKey (Just "//evil.example.org") Nothing Nothing)) requestContext
         let state = stateOf authorization.url
-        Just session <- run' (takeOAuthSession state) requestContext
+        Just session <- run' (takeOAuthSession state userAlbert.uuid defaultTenantUuid) requestContext
         session.returnUrl `shouldBe` Nothing
       it "refuses a provider that is not configured" $ do
         prepare requestContext
@@ -157,18 +160,45 @@ oauthServiceSpec requestContext =
         either (const True) (const False) result `shouldBe` True
       it "returns the stored token when it does not expire soon" $ do
         prepare requestContext
-        connect requestContext "submission:oauthRepository" "deposit"
+        connect requestContext (SubmissionOAuthProvider "oauthRepository") "deposit"
         result <- run' (getValidAccessToken userAlbert.uuid Nothing (SubmissionOAuthProvider "oauthRepository")) requestContext
         result `shouldBe` Right "access-token"
       it "asks to reconnect a connection with older permissions" $ do
         prepare requestContext
-        connect requestContext zenodoKey "deposit:write"
+        connect requestContext (ZenodoOAuthProvider SandboxZenodoRepository) "deposit:write"
         result <- run' (getValidAccessToken userAlbert.uuid Nothing (ZenodoOAuthProvider SandboxZenodoRepository)) requestContext
         either (const True) (const False) result `shouldBe` True
+    describe "credentialKey" $
+      it "does not use a token issued by another configuration of the provider" $ do
+        prepare requestContext
+        connect requestContext (SubmissionOAuthProvider "oauthRepository") "deposit"
+        Just config <- run' (resolveProviderConfig Nothing (SubmissionOAuthProvider "oauthRepository")) requestContext
+        connectedBefore <- run' (isConnected userAlbert.uuid (SubmissionOAuthProvider "oauthRepository") config) requestContext
+        connectedBefore `shouldBe` True
+        let otherServer = config {tokenUrl = "https://other.example.org/oauth/token"} :: OAuthProviderConfig
+        connectedAfter <- run' (isConnected userAlbert.uuid (SubmissionOAuthProvider "oauthRepository") otherServer) requestContext
+        connectedAfter `shouldBe` False
+    describe "disconnectOAuth" $
+      it "removes the connections of the provider" $ do
+        prepare requestContext
+        connect requestContext (SubmissionOAuthProvider "oauthRepository") "deposit"
+        run' (disconnectOAuth "submission:oauthRepository") requestContext
+        connections <- run' getOAuthConnections requestContext
+        fmap (.connected) connections `shouldBe` [False, False]
+    describe "takeOAuthSession" $
+      it "is taken only by the user who started it" $ do
+        prepare requestContext
+        now <- getCurrentTime
+        let session = OAuthSession "someone-elses-state" userAlbert.uuid zenodoKey Nothing "verifier" Nothing Nothing Nothing defaultTenantUuid now
+        _ <- run' (insertOAuthSession session) requestContext
+        taken <- run' (takeOAuthSession "someone-elses-state" userNikola.uuid defaultTenantUuid) requestContext
+        taken `shouldBe` Nothing
+        takenByOwner <- run' (takeOAuthSession "someone-elses-state" userAlbert.uuid defaultTenantUuid) requestContext
+        fmap (.state) takenByOwner `shouldBe` Just "someone-elses-state"
     describe "getAvailableSubmissions" $
       it "says which submissions need a connection of the user" $ do
         prepare requestContext
-        connect requestContext zenodoKey "deposit:write deposit:actions"
+        connect requestContext (ZenodoOAuthProvider SandboxZenodoRepository) "deposit:write deposit:actions"
         run' (saveEncryptedSettingsSubmission defaultTenantUuid Nothing (settingsSubmission {definitions = [settingsSubmissionDefinition, settingsSubmissionOAuthDefinition, settingsSubmissionZenodoDefinition]})) requestContext
         definitions <- run' (getAvailableSubmissions project1.uuid) requestContext
         fmap (\d -> (d.sId, d.oauthProvider, d.requiresConnection)) definitions
@@ -190,10 +220,12 @@ prepare requestContext = do
   run' (saveEncryptedSettingsZenodo defaultTenantUuid settingsZenodo) requestContext
   run' (saveEncryptedSettingsSubmission defaultTenantUuid Nothing (settingsSubmission {definitions = [settingsSubmissionDefinition, settingsSubmissionOAuthDefinition]})) requestContext
 
+-- Stores a connection of Albert issued by the current configuration of the provider
 connect requestContext provider scope = do
+  Just config <- run' (resolveProviderConfig Nothing provider) requestContext
   now <- getCurrentTime
   encryptedToken <- encryptAES256WithRandomIV defaultSecret "access-token"
-  let credential = UserOAuthCredential userAlbert.uuid provider encryptedToken Nothing scope (Just (addUTCTime 3600 now)) defaultTenantUuid now now
+  let credential = UserOAuthCredential userAlbert.uuid (credentialKey provider config) encryptedToken Nothing scope (Just (addUTCTime 3600 now)) defaultTenantUuid now now
   _ <- run' (saveUserOAuthCredential credential) requestContext
   return ()
 

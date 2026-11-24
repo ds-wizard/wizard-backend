@@ -9,6 +9,7 @@ module Shared.Service.OAuth.OAuthService (
   isConnected,
   resolveProviderConfig,
   missingScopes,
+  credentialKey,
   scopeWorkspaceUuid,
   toConnectionDTO,
 ) where
@@ -53,7 +54,7 @@ getOAuthConnections = do
   mWorkspaceUuid <- scopeWorkspaceUuid
   providers <- availableProviders mWorkspaceUuid
   credentials <- findUserOAuthCredentials user.uuid
-  return [toConnectionDTO provider config (L.find ((== providerKey provider) . (.provider)) credentials) | (provider, config) <- providers]
+  return [toConnectionDTO provider config (L.find ((== credentialKey provider config) . (.provider)) credentials) | (provider, config) <- providers]
 
 -- Starts the authorization code flow with PKCE; the frontend redirects the user to the returned URL and the provider
 -- redirects back to the submission accounts of the profile (<client url>/users/edit/current/submission-accounts),
@@ -91,20 +92,17 @@ authorizeOAuth reqDto =
     redirectUri <- getRedirectUri
     return OAuthAuthorizationDTO {url = buildAuthorizeUrl config.authorizeUrl config.clientId redirectUri (unwords config.scopes) state (pkceCodeChallenge codeVerifier)}
 
--- Exchanges the code: the state is used only once, it must belong to the current user and be at most 10 minutes old
+-- Exchanges the code: the state is used only once (it is consumed in its own committed transaction, so that a failed
+-- exchange does not restore it), it must belong to the current user and be at most 10 minutes old
 exchangeOAuthAuthorization :: WizardRequestContextC s m => OAuthCallbackDTO -> m (OAuthConnectionDTO, OAuthSession)
 exchangeOAuthAuthorization reqDto = do
   user <- getCurrentUser
   tenantUuid <- asks (.tenantUuid')
   now <- liftIO getCurrentTime
-  mSession <- takeOAuthSession reqDto.state
+  mSession <- runInPooledTransaction (takeOAuthSession reqDto.state user.uuid tenantUuid)
   session <-
     case mSession of
-      Just session
-        | session.userUuid == user.uuid
-            && session.tenantUuid == tenantUuid
-            && diffUTCTime now session.createdAt < 600 ->
-            return session
+      Just session | diffUTCTime now session.createdAt < 600 -> return session
       _ -> throwError $ UserError _ERROR_SERVICE_OAUTH__INVALID_STATE
   provider <- maybe (throwError $ UserError _ERROR_SERVICE_OAUTH__INVALID_STATE) return (readProviderKey session.provider)
   config <- requireProviderConfig session.workspaceUuid provider
@@ -118,22 +116,23 @@ exchangeOAuthAuthorization reqDto = do
 disconnectOAuth :: WizardRequestContextC s m => String -> m ()
 disconnectOAuth key = do
   user <- getCurrentUser
-  deleteUserOAuthCredential user.uuid key
+  deleteUserOAuthCredentialsOfProvider user.uuid key
 
 -- Whether the user has a connection to the provider with all the permissions it asks for
 isConnected :: WizardRequestContextC s m => U.UUID -> OAuthProvider -> OAuthProviderConfig -> m Bool
 isConnected userUuid provider config = do
-  mCredential <- findUserOAuthCredential userUuid (providerKey provider)
+  mCredential <- findUserOAuthCredential userUuid (credentialKey provider config)
   return $ maybe False (\credential -> null (missingScopes config credential.scope)) mCredential
 
--- The access token of the user, refreshed when it expires within a minute; Left with a message for the user otherwise
+-- The access token of the user, refreshed when it expires within a minute; Left with a message for the user otherwise.
+-- The credential is locked (within the transaction of the caller), so that concurrent refreshes do not race.
 getValidAccessToken :: WizardRequestContextC s m => U.UUID -> Maybe U.UUID -> OAuthProvider -> m (Either String String)
 getValidAccessToken userUuid mWorkspaceUuid provider = do
   mConfig <- resolveProviderConfig mWorkspaceUuid provider
   case mConfig of
     Nothing -> return . Left $ "The connection " ++ providerKey provider ++ " is not configured anymore."
     Just config -> do
-      mCredential <- findUserOAuthCredential userUuid (providerKey provider)
+      mCredential <- findUserOAuthCredentialForUpdate userUuid (credentialKey provider config)
       case mCredential of
         Nothing -> return . Left $ "Connect your account of " ++ config.name ++ " in your profile first."
         Just credential
@@ -159,7 +158,7 @@ getValidAccessToken userUuid mWorkspaceUuid provider = do
               return . Right $ token.accessToken
             Left error
               | "invalid_grant" `L.isInfixOf` error -> do
-                  deleteUserOAuthCredential userUuid (providerKey provider)
+                  deleteUserOAuthCredential userUuid (credentialKey provider config)
                   return . Left $ expired config
               | otherwise -> return . Left $ error
 
@@ -197,9 +196,17 @@ resolveProviderConfig mWorkspaceUuid (SubmissionOAuthProvider definitionId) = do
         , scopes = oauth.scopes
         }
 
--- The scopes the provider asks for that the token does not have (a token without a scope has what was asked for)
+-- The scopes the provider asks for that the token does not have (a token without a scope has what was asked for);
+-- OAuth separates the scopes with spaces, some providers with commas
 missingScopes :: OAuthProviderConfig -> String -> [String]
-missingScopes config scope = filter (`notElem` words scope) config.scopes
+missingScopes config scope =
+  let granted = words (fmap (\c -> if c == ',' then ' ' else c) scope)
+   in filter (`notElem` granted) config.scopes
+
+-- The key a credential is stored with: the provider and the configuration that issued it (its token URL and client),
+-- so that a token is never used with another configuration (another server of a workspace override, a changed client)
+credentialKey :: OAuthProvider -> OAuthProviderConfig -> String
+credentialKey provider config = providerKey provider ++ "#" ++ take 16 (hashSHA256 (config.tokenUrl ++ "\n" ++ config.clientId))
 
 scopeWorkspaceUuid :: WizardRequestContextC s m => m (Maybe U.UUID)
 scopeWorkspaceUuid = do
@@ -254,7 +261,7 @@ storeToken userUuid provider config mPreviousRefreshToken token = do
   let credential =
         UserOAuthCredential
           { userUuid = userUuid
-          , provider = providerKey provider
+          , provider = credentialKey provider config
           , accessToken = encryptedAccessToken
           , refreshToken = encryptedRefreshToken
           , scope = fromMaybe (unwords config.scopes) token.scope
