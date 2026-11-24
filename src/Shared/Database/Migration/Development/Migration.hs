@@ -29,6 +29,7 @@ import qualified Shared.Database.Migration.Development.Locale.LocaleSchemaMigrat
 import qualified Shared.Database.Migration.Development.MailTemplateLocale.MailTemplateLocaleMigration as MailTemplateLocale
 import qualified Shared.Database.Migration.Development.MailTemplateLocale.MailTemplateLocaleSchemaMigration as MailTemplateLocale
 import qualified Shared.Database.Migration.Development.Mcp.McpSchemaMigration as Mcp
+import qualified Shared.Database.Migration.Development.OAuth.OAuthSchemaMigration as OAuth
 import qualified Shared.Database.Migration.Development.OpenId.OpenIdClientMigration as OpenIdClient
 import qualified Shared.Database.Migration.Development.OpenId.OpenIdClientSchemaMigration as OpenIdClient
 import qualified Shared.Database.Migration.Development.OpenId.OpenIdClientSessionSchemaMigration as OpenIdClientSession
@@ -59,7 +60,6 @@ import qualified Shared.Database.Migration.Development.UserEmailLink.UserEmailLi
 import qualified Shared.Database.Migration.Development.Websocket.WebsocketSchemaMigration as Websocket
 import qualified Shared.Database.Migration.Development.Workspace.WorkspaceMigration as Workspace
 import qualified Shared.Database.Migration.Development.Workspace.WorkspaceSchemaMigration as Workspace
-import qualified Shared.Database.Migration.Development.Zenodo.ZenodoSchemaMigration as Zenodo
 import Shared.Model.Context.WizardRequestContext
 import Shared.Util.Logger
 
@@ -89,7 +89,7 @@ runMigration = do
   Prefab.dropTables
   PersistentCommand.dropTables
   Submission.dropTables
-  Zenodo.dropTables
+  OAuth.dropTables
   UserEmailLink.dropTables
   Mcp.dropTables
   KnowledgeModelMigration.dropTables
@@ -149,7 +149,7 @@ runMigration = do
   Document.createTables
   KnowledgeModelMigration.createTables
   Submission.createTables
-  Zenodo.createTables
+  OAuth.createTables
   PersistentCommand.createTables
   Prefab.createTables
   TelemetryEvent.createTables

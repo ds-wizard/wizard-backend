@@ -25,3 +25,7 @@ readZenodoRepository :: String -> Maybe ZenodoRepository
 readZenodoRepository "SandboxZenodoRepository" = Just SandboxZenodoRepository
 readZenodoRepository "ProductionZenodoRepository" = Just ProductionZenodoRepository
 readZenodoRepository _ = Nothing
+
+zenodoRepositoryName :: ZenodoRepository -> String
+zenodoRepositoryName SandboxZenodoRepository = "Zenodo Sandbox"
+zenodoRepositoryName ProductionZenodoRepository = "Zenodo"

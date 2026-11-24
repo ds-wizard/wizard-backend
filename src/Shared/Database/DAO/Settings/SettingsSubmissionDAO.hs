@@ -25,7 +25,7 @@ childTables :: [String]
 childTables = [exportTable, definitionTable]
 
 definitionColumns :: [String]
-definitionColumns = ["id", "name", "description", "target"]
+definitionColumns = ["id", "name", "description", "target", "connect_on_submit"]
 
 exportColumns :: [String]
 exportColumns = ["id", "version", "format_name", "madmp_metadata"]

@@ -66,7 +66,7 @@ submissionServiceSpec requestContext =
         runInContext' (saveEncryptedSettingsZenodo defaultTenantUuid settingsZenodo) requestContext
         runInContext' (saveSettingsSubmission defaultTenantUuid Nothing (settingsSubmission {definitions = [settingsSubmissionZenodoDefinition]})) requestContext
         result <- runInContext (createSubmission project1.uuid (SubmissionCreateDTO settingsSubmissionZenodoDefinition.sId)) requestContext
-        result `shouldBe` Left (UserError (_ERROR_SERVICE_SUBMISSION__ZENODO_NOT_CONNECTED "https://sandbox.zenodo.org"))
+        result `shouldBe` Left (UserError (_ERROR_SERVICE_SUBMISSION__NOT_CONNECTED "Zenodo Sandbox"))
     describe "document trigger" $
       it "creates a submission command when a document of a submission in progress is finished" $ do
         prepare requestContext [doc6]

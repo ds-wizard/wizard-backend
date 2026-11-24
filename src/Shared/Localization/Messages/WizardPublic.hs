@@ -109,18 +109,18 @@ _ERROR_SERVICE_DOCUMENT__PROJECT_OR_FORMAT_NOT_SET_UP =
 _ERROR_SERVICE_SUBMISSION__DEFINITION_NOT_AVAILABLE definitionId =
   LocaleRecord "error.service.submission.definition_not_available" "Submission '%s' is not available for this project" [definitionId]
 
-_ERROR_SERVICE_SUBMISSION__ZENODO_NOT_CONNECTED baseUrl =
-  LocaleRecord "error.service.submission.zenodo_not_connected" "Connect your Zenodo account (%s) in your profile first" [baseUrl]
+_ERROR_SERVICE_SUBMISSION__NOT_CONNECTED name =
+  LocaleRecord "error.service.submission.not_connected" "Connect your account of %s in your profile first" [name]
 
--- Zenodo
-_ERROR_SERVICE_ZENODO__REPOSITORY_NOT_AVAILABLE repository =
-  LocaleRecord "error.service.zenodo.repository_not_available" "Zenodo repository '%s' is not configured" [repository]
+-- OAuth
+_ERROR_SERVICE_OAUTH__PROVIDER_NOT_AVAILABLE provider =
+  LocaleRecord "error.service.oauth.provider_not_available" "The connection '%s' is not configured" [provider]
 
-_ERROR_SERVICE_ZENODO__INVALID_STATE =
-  LocaleRecord "error.service.zenodo.invalid_state" "The Zenodo authorization is invalid or expired, please connect again" []
+_ERROR_SERVICE_OAUTH__INVALID_STATE =
+  LocaleRecord "error.service.oauth.invalid_state" "The authorization is invalid or expired, please connect again" []
 
-_ERROR_SERVICE_ZENODO__CONNECTION_FAILED detail =
-  LocaleRecord "error.service.zenodo.connection_failed" "Connecting the Zenodo account failed: %s" [detail]
+_ERROR_SERVICE_OAUTH__CONNECTION_FAILED detail =
+  LocaleRecord "error.service.oauth.connection_failed" "Connecting the account failed: %s" [detail]
 
 -- Auth
 _ERROR_SERVICE_AUTH__SERVICE_NOT_DEFINED authId =

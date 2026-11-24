@@ -8,7 +8,13 @@ import Shared.Service.Settings.SettingsSubmissionUtil
 import Shared.Util.Secret
 
 maskSubmission :: SettingsSubmission -> SettingsSubmission
-maskSubmission settings = settings {definitions = fmap (mapDefinitionRequest (\request -> request {headers = maskSecrets request.headers})) settings.definitions}
+maskSubmission settings =
+  settings
+    { definitions =
+        fmap
+          (mapDefinitionOAuth (\oauth -> oauth {clientSecret = maskSecret oauth.clientSecret}) . mapDefinitionRequest (\request -> request {headers = maskSecrets request.headers}))
+          settings.definitions
+    }
 
 unmaskSubmission :: SettingsSubmission -> SettingsSubmission -> Either AppError SettingsSubmission
 unmaskSubmission current settings = (\definitions -> settings {definitions = definitions}) <$> traverse (unmaskDefinition current) settings.definitions

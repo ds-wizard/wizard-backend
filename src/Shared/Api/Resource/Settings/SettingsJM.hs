@@ -199,6 +199,15 @@ instance ToJSON SettingsSubmissionTarget where
 instance JsonSchema SettingsSubmissionTarget where
   jsonSchema = genericJsonSchema (jsonOptionsWithTypeField "type")
 
+instance FromJSON SettingsSubmissionOAuth where
+  parseJSON = genericParseJSON jsonOptions
+
+instance ToJSON SettingsSubmissionOAuth where
+  toJSON = genericToJSON jsonOptions
+
+instance JsonSchema SettingsSubmissionOAuth where
+  jsonSchema = genericJsonSchema jsonOptions
+
 instance FromJSON ZenodoRepository
 
 instance ToJSON ZenodoRepository

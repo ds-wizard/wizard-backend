@@ -43,6 +43,9 @@ settingsSubmissionDefinitionDto =
             , formatName = formatJson.name
             }
         ]
+    , oauthProvider = Nothing
+    , requiresConnection = False
+    , connectOnSubmit = True
     }
 
 submission1 :: Submission

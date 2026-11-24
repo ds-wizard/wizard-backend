@@ -32,7 +32,8 @@ import Shared.Model.User.User
 import Shared.Model.Zenodo.ZenodoRepository
 import Shared.S3.Document.DocumentS3
 import Shared.Service.Tenant.TenantHelper (getClientUrl)
-import Shared.Service.Zenodo.ZenodoAuthService
+import Shared.Model.OAuth.OAuthProvider
+import Shared.Service.OAuth.OAuthService
 import Shared.Service.Zenodo.ZenodoMetadataMapper
 
 data ZenodoTarget = ZenodoTarget
@@ -49,7 +50,7 @@ submitToZenodo submission target project documents =
   case submission.createdBy of
     Nothing -> return . Left $ "The user who created the submission does not exist anymore."
     Just userUuid -> do
-      eToken <- getValidZenodoAccessToken userUuid target.repository
+      eToken <- getValidAccessToken userUuid Nothing (ZenodoOAuthProvider target.repository)
       case eToken of
         Left error -> return (Left error)
         Right token -> do

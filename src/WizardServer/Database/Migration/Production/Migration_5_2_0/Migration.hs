@@ -37,7 +37,8 @@ CREATE TABLE settings_submission_definition
     position       integer NOT NULL,
     name           varchar NOT NULL,
     description    varchar NOT NULL,
-    target         jsonb   NOT NULL,
+    target            jsonb   NOT NULL,
+    connect_on_submit boolean NOT NULL DEFAULT true,
     CONSTRAINT settings_submission_definition_key UNIQUE NULLS NOT DISTINCT (tenant_uuid, workspace_uuid, id),
     CONSTRAINT settings_submission_definition_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE,
     CONSTRAINT settings_submission_definition_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE
@@ -243,10 +244,10 @@ INSERT INTO settings_zenodo (tenant_uuid, sandbox_enabled, sandbox_client_id, sa
 SELECT uuid, false, '', '', false, '', '', now(), now()
 FROM tenant;
 
-CREATE TABLE user_zenodo_credential
+CREATE TABLE user_oauth_credential
 (
     user_uuid     uuid        NOT NULL,
-    repository    varchar     NOT NULL,
+    provider      varchar     NOT NULL,
     access_token  varchar     NOT NULL,
     refresh_token varchar,
     scope         varchar     NOT NULL,
@@ -254,21 +255,25 @@ CREATE TABLE user_zenodo_credential
     tenant_uuid   uuid        NOT NULL,
     created_at    timestamptz NOT NULL,
     updated_at    timestamptz NOT NULL,
-    CONSTRAINT user_zenodo_credential_pk PRIMARY KEY (user_uuid, repository),
-    CONSTRAINT user_zenodo_credential_user_uuid_fk FOREIGN KEY (user_uuid) REFERENCES user_entity (uuid) ON DELETE CASCADE,
-    CONSTRAINT user_zenodo_credential_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
+    CONSTRAINT user_oauth_credential_pk PRIMARY KEY (user_uuid, provider),
+    CONSTRAINT user_oauth_credential_user_uuid_fk FOREIGN KEY (user_uuid) REFERENCES user_entity (uuid) ON DELETE CASCADE,
+    CONSTRAINT user_oauth_credential_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
 );
 
-CREATE TABLE zenodo_oauth_session
+CREATE TABLE oauth_session
 (
-    state         varchar     NOT NULL,
-    user_uuid     uuid        NOT NULL,
-    repository    varchar     NOT NULL,
-    code_verifier varchar     NOT NULL,
-    tenant_uuid   uuid        NOT NULL,
-    created_at    timestamptz NOT NULL,
-    CONSTRAINT zenodo_oauth_session_pk PRIMARY KEY (state),
-    CONSTRAINT zenodo_oauth_session_user_uuid_fk FOREIGN KEY (user_uuid) REFERENCES user_entity (uuid) ON DELETE CASCADE,
-    CONSTRAINT zenodo_oauth_session_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
+    state          varchar     NOT NULL,
+    user_uuid      uuid        NOT NULL,
+    provider       varchar     NOT NULL,
+    workspace_uuid uuid,
+    code_verifier  varchar     NOT NULL,
+    return_url     varchar,
+    project_uuid   uuid,
+    definition_id  varchar,
+    tenant_uuid    uuid        NOT NULL,
+    created_at     timestamptz NOT NULL,
+    CONSTRAINT oauth_session_pk PRIMARY KEY (state),
+    CONSTRAINT oauth_session_user_uuid_fk FOREIGN KEY (user_uuid) REFERENCES user_entity (uuid) ON DELETE CASCADE,
+    CONSTRAINT oauth_session_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE
 );
 |]

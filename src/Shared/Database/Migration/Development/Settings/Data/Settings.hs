@@ -101,6 +101,7 @@ settingsSubmissionDefinition =
     , description = "Some description"
     , exports = [settingsSubmissionExport]
     , target = settingsSubmissionHttpTarget
+    , connectOnSubmit = True
     }
 
 settingsSubmissionExport :: SettingsSubmissionExport
@@ -117,6 +118,7 @@ settingsSubmissionHttpTarget =
   HttpSubmissionTarget
     { props = [settingsSubmissionServiceApiTokenProp, settingsSubmissionServiceSecretProp]
     , request = settingsSubmissionServiceRequest
+    , oauth = Nothing
     }
 
 settingsSubmissionZenodoDefinition :: SettingsSubmissionDefinition
@@ -134,6 +136,7 @@ settingsSubmissionZenodoDefinition =
           , accessLevel = "public"
           , community = Nothing
           }
+    , connectOnSubmit = True
     }
 
 settingsSubmissionServiceRequest :: SettingsSubmissionServiceRequest
@@ -150,4 +153,27 @@ settingsZenodo =
   SettingsZenodo
     { sandbox = SettingsZenodoRepository {enabled = True, clientId = "sandbox-client-id", clientSecret = "sandbox-client-secret"}
     , production = defaultSettingsZenodoRepository
+    }
+
+settingsSubmissionOAuth :: SettingsSubmissionOAuth
+settingsSubmissionOAuth =
+  SettingsSubmissionOAuth
+    { authorizeUrl = "https://repository.example.org/oauth/authorize"
+    , tokenUrl = "https://repository.example.org/oauth/token"
+    , clientId = "repository-client-id"
+    , clientSecret = "repository-client-secret"
+    , scopes = ["deposit"]
+    }
+
+settingsSubmissionOAuthDefinition :: SettingsSubmissionDefinition
+settingsSubmissionOAuthDefinition =
+  settingsSubmissionDefinition
+    { sId = "oauthRepository"
+    , name = "OAuth Repository"
+    , target =
+        HttpSubmissionTarget
+          { props = []
+          , request = settingsSubmissionServiceRequest {headers = M.fromList [("Authorization", "Bearer ${accessToken}")]}
+          , oauth = Just settingsSubmissionOAuth
+          }
     }

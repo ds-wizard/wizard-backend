@@ -23,6 +23,7 @@ instance ToRow SettingsSubmissionDefinition where
     , toField name
     , toField description
     , toJSONField target
+    , toField connectOnSubmit
     ]
 
 instance FromRow SettingsSubmissionDefinition where
@@ -31,6 +32,7 @@ instance FromRow SettingsSubmissionDefinition where
     name <- field
     description <- field
     target <- fieldWith fromJSONField
+    connectOnSubmit <- field
     let exports = []
     return SettingsSubmissionDefinition {..}
 

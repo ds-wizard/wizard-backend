@@ -107,6 +107,9 @@ instance ToSchema SettingsSubmissionTarget where
 
 instance ToSchema ZenodoRepository
 
+instance ToSchema SettingsSubmissionOAuth where
+  declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)
+
 instance ToSchema SettingsSubmissionServiceRequest where
   declareNamedSchema = genericDeclareNamedSchema (fromAesonOptions jsonOptions)
 

@@ -289,7 +289,8 @@ settingsTablesSql =
   \    position       integer NOT NULL, \
   \    name           varchar NOT NULL, \
   \    description    varchar NOT NULL, \
-  \    target         jsonb   NOT NULL, \
+  \    target            jsonb   NOT NULL, \
+  \    connect_on_submit boolean NOT NULL DEFAULT true, \
   \    CONSTRAINT settings_submission_definition_key UNIQUE NULLS NOT DISTINCT (tenant_uuid, workspace_uuid, id), \
   \    CONSTRAINT settings_submission_definition_tenant_uuid_fk FOREIGN KEY (tenant_uuid) REFERENCES tenant (uuid) ON DELETE CASCADE, \
   \    CONSTRAINT settings_submission_definition_workspace_uuid_fk FOREIGN KEY (workspace_uuid) REFERENCES workspace (uuid) ON DELETE CASCADE \

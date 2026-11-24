@@ -9,6 +9,12 @@ data SubmissionDefinitionDTO = SubmissionDefinitionDTO
   , description :: String
   , targetType :: String
   , exports :: [SubmissionDefinitionExportDTO]
+  , oauthProvider :: Maybe String
+  -- ^ the key of the OAuth provider the target needs a connection to
+  , requiresConnection :: Bool
+  -- ^ the current user is not connected to it (or with older permissions)
+  , connectOnSubmit :: Bool
+  -- ^ submitting without the connection starts it and submits once connected
   }
   deriving (Show, Eq, Generic)
 

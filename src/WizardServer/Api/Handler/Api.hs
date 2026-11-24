@@ -20,6 +20,7 @@ import Shared.Api.Handler.KnowledgeModelSecret.Api
 import Shared.Api.Handler.Locale.Api
 import Shared.Api.Handler.MailTemplateLocale.Api
 import Shared.Api.Handler.Mcp.Api
+import Shared.Api.Handler.OAuth.Api
 import Shared.Api.Handler.PersistentCommand.Api
 import Shared.Api.Handler.PluginSettings.Api
 import Shared.Api.Handler.Prefab.Api
@@ -28,7 +29,6 @@ import Shared.Api.Handler.ProjectCommentThread.Api
 import Shared.Api.Handler.ProjectFile.Api
 import Shared.Api.Handler.Settings.Api
 import Shared.Api.Handler.Submission.Api
-import Shared.Api.Handler.Zenodo.Api
 import Shared.Api.Handler.Token.Api
 import Shared.Api.Handler.TypeHint.Api
 import Shared.Api.Handler.UserGroup.Api
@@ -88,7 +88,7 @@ type ApplicationAPI =
     :<|> UserGroupAPI
     :<|> UserSubmissionPropsAPI
     :<|> WorkspaceAPI
-    :<|> ZenodoAPI
+    :<|> OAuthConnectionAPI
 
 applicationApi :: Proxy ApplicationAPI
 applicationApi = Proxy
@@ -136,4 +136,4 @@ applicationServer =
     :<|> userGroupServer
     :<|> userSubmissionPropsServer
     :<|> workspaceServer
-    :<|> zenodoServer
+    :<|> oauthConnectionServer

@@ -17,6 +17,18 @@ definitionProps definition =
     HttpSubmissionTarget {props = props} -> props
     ZenodoSubmissionTarget {} -> []
 
+definitionOAuth :: SettingsSubmissionDefinition -> Maybe SettingsSubmissionOAuth
+definitionOAuth definition =
+  case definition.target of
+    HttpSubmissionTarget {oauth = oauth} -> oauth
+    ZenodoSubmissionTarget {} -> Nothing
+
+mapDefinitionOAuth :: (SettingsSubmissionOAuth -> SettingsSubmissionOAuth) -> SettingsSubmissionDefinition -> SettingsSubmissionDefinition
+mapDefinitionOAuth f definition =
+  case definition.target of
+    target@HttpSubmissionTarget {oauth = Just oauth} -> definition {target = target {oauth = Just (f oauth)}}
+    _ -> definition
+
 mapDefinitionRequest :: (SettingsSubmissionServiceRequest -> SettingsSubmissionServiceRequest) -> SettingsSubmissionDefinition -> SettingsSubmissionDefinition
 mapDefinitionRequest f definition =
   case definition.target of

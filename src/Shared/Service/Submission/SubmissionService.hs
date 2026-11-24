@@ -1,11 +1,11 @@
 module Shared.Service.Submission.SubmissionService where
 
-import Control.Monad (forM, forM_, unless, when)
+import Control.Monad (forM, forM_, unless)
 import Control.Monad.Except (throwError)
 import Control.Monad.Reader (asks, liftIO)
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
-import Data.Maybe (catMaybes, isNothing, listToMaybe)
+import Data.Maybe (catMaybes, listToMaybe)
 import Data.Time
 import qualified Data.UUID as U
 
@@ -21,7 +21,6 @@ import Shared.Database.DAO.PersistentCommand.PersistentCommandDAO
 import Shared.Database.DAO.Project.ProjectDAO
 import Shared.Database.DAO.Submission.SubmissionDAO
 import Shared.Database.DAO.WizardCommon
-import Shared.Database.DAO.Zenodo.UserZenodoCredentialDAO
 import Shared.Integration.Http.Submission.Runner
 import Shared.Localization.Messages.Public
 import Shared.Localization.Messages.WizardPublic
@@ -42,7 +41,7 @@ import Shared.Model.Submission.Submission
 import Shared.Model.Submission.SubmissionList
 import Shared.Model.Submission.SubmissionResult
 import Shared.Model.User.UserSubmissionPropList
-import Shared.Model.Zenodo.ZenodoRepository
+import Shared.Model.OAuth.OAuthProvider
 import Shared.S3.Document.DocumentS3
 import Shared.Service.Automation.AutomationHookService
 import Shared.Service.Common
@@ -53,7 +52,7 @@ import Shared.Service.Document.DocumentService
 import Shared.Service.Document.DocumentUtil
 import Shared.Service.DocumentTemplate.WizardDocumentTemplateUtil
 import Shared.Service.PersistentCommand.PersistentCommandMapper
-import Shared.Service.Settings.OrganizationSettingsService (getCurrentSettingsZenodo)
+import Shared.Service.OAuth.OAuthService
 import Shared.Service.Settings.SettingsSubmissionUtil
 import Shared.Service.Settings.WorkspaceSettingsService
 import Shared.Service.Submission.SubmissionMapper
@@ -76,14 +75,22 @@ getAvailableSubmissions projectUuid = do
   checkEditPermissionToDoc (Just project.uuid)
   settings <- getEffectiveSettingsSubmission (Just project.workspaceUuid)
   usableTemplates <- findUsableTemplates project
-  zenodoRepositories <- availableZenodoRepositories <$> getCurrentSettingsZenodo
-  let isTargetAvailable definition =
-        case definition.target of
-          ZenodoSubmissionTarget {repository = repository} -> repository `elem` zenodoRepositories
-          HttpSubmissionTarget {} -> True
-  definitions <- forM (filter isTargetAvailable settings.definitions) $ \definition -> do
-    mExports <- resolveExports usableTemplates definition
-    return $ fmap (toDefinitionDTO definition) mExports
+  currentUser <- getCurrentUser
+  definitions <- forM settings.definitions $ \definition -> do
+    -- A definition whose OAuth provider is not configured (e.g. a disabled Zenodo repository) is not offered
+    mConnection <-
+      case definitionOAuthProvider definition of
+        Nothing -> return (Just Nothing)
+        Just provider -> do
+          mConfig <- resolveProviderConfig (Just project.workspaceUuid) provider
+          case mConfig of
+            Nothing -> return Nothing
+            Just config -> Just . Just . (,) provider <$> isConnected currentUser.uuid provider config
+    case mConnection of
+      Nothing -> return Nothing
+      Just connection -> do
+        mExports <- resolveExports usableTemplates definition
+        return $ fmap (toDefinitionDTO definition connection) mExports
   return . catMaybes $ definitions
 
 getSubmissionsForProject :: WizardRequestContextC s m => U.UUID -> m [SubmissionList]
@@ -116,7 +123,7 @@ createSubmission projectUuid reqDto =
     usableTemplates <- findUsableTemplates project
     exports <- resolveExports usableTemplates definition >>= maybe (notAvailable reqDto.definitionId) return
     _ <- checkAutomationHook (ProjectSubmitHook project definition.sId)
-    checkTargetPrerequisites definition
+    checkTargetPrerequisites project definition
     (ctx, mCutOffEventUuid) <- createProjectDocumentContext project Nothing
     existingDocuments <-
       findDocumentsForCurrentTenantFiltered
@@ -164,17 +171,18 @@ notAvailable definitionId = throwError . UserError $ _ERROR_SERVICE_SUBMISSION__
 checkIfSubmissionIsEnabled :: WizardRequestContextC s m => U.UUID -> m ()
 checkIfSubmissionIsEnabled workspaceUuid = checkIfTenantFeatureIsEnabled "Submission" (getEffectiveSettingsSubmission (Just workspaceUuid)) (.enabled)
 
--- A Zenodo target needs a configured repository and the account of the user connected to it
-checkTargetPrerequisites :: WizardRequestContextC s m => SettingsSubmissionDefinition -> m ()
-checkTargetPrerequisites definition =
-  case definition.target of
-    HttpSubmissionTarget {} -> return ()
-    ZenodoSubmissionTarget {repository = repository} -> do
-      zenodoRepositories <- availableZenodoRepositories <$> getCurrentSettingsZenodo
-      unless (repository `elem` zenodoRepositories) (throwError . UserError $ _ERROR_SERVICE_SUBMISSION__DEFINITION_NOT_AVAILABLE definition.sId)
+-- A target with an OAuth provider (Zenodo, an HTTP target with OAuth) needs the provider configured and the account of
+-- the user connected to it
+checkTargetPrerequisites :: WizardRequestContextC s m => Project -> SettingsSubmissionDefinition -> m ()
+checkTargetPrerequisites project definition =
+  case definitionOAuthProvider definition of
+    Nothing -> return ()
+    Just provider -> do
+      mConfig <- resolveProviderConfig (Just project.workspaceUuid) provider
+      config <- maybe (notAvailable definition.sId) return mConfig
       currentUser <- getCurrentUser
-      mCredential <- findUserZenodoCredential currentUser.uuid repository
-      when (isNothing mCredential) (throwError . UserError $ _ERROR_SERVICE_SUBMISSION__ZENODO_NOT_CONNECTED (zenodoBaseUrl repository))
+      connected <- isConnected currentUser.uuid provider config
+      unless connected (throwError . UserError $ _ERROR_SERVICE_SUBMISSION__NOT_CONNECTED config.name)
 
 findUsableTemplates :: WizardRequestContextC s m => Project -> m [DocumentTemplate]
 findUsableTemplates project = do
@@ -205,8 +213,8 @@ findReusableDocument resolved documents =
     orElse (Just a) _ = Just a
     orElse Nothing b = b
 
-toDefinitionDTO :: SettingsSubmissionDefinition -> [ResolvedExport] -> SubmissionDefinitionDTO
-toDefinitionDTO definition exports =
+toDefinitionDTO :: SettingsSubmissionDefinition -> Maybe (OAuthProvider, Bool) -> [ResolvedExport] -> SubmissionDefinitionDTO
+toDefinitionDTO definition mConnection exports =
   SubmissionDefinitionDTO
     { sId = definition.sId
     , name = definition.name
@@ -223,6 +231,9 @@ toDefinitionDTO definition exports =
           }
         | resolved <- exports
         ]
+    , oauthProvider = fmap (providerKey . fst) mConnection
+    , requiresConnection = maybe False (not . snd) mConnection
+    , connectOnSubmit = definition.connectOnSubmit
     }
 
 sendSubmission :: WizardRequestContextC s m => Submission -> [Document] -> m ()
@@ -234,7 +245,7 @@ sendSubmission submission documents = do
     Just definition -> do
       result <-
         case definition.target of
-          HttpSubmissionTarget {request = request} -> submitToHttpTarget definition request documents
+          HttpSubmissionTarget {request = request} -> submitToHttpTarget submission project definition request documents
           ZenodoSubmissionTarget {repository = repository, resourceType = resourceType, licenseId = licenseId, accessLevel = accessLevel, community = community} ->
             submitToZenodo
               submission
@@ -260,17 +271,28 @@ failSubmission submission _ error = do
   emitEvent (ProjectSubmissionFailedEvent project saved (Just error))
 
 -- Sends the documents one by one (one request per document); the location is the one returned for the last document
-submitToHttpTarget :: WizardRequestContextC s m => SettingsSubmissionDefinition -> SettingsSubmissionServiceRequest -> [Document] -> m (Either String SubmissionResult)
-submitToHttpTarget definition request documents = do
+-- With an OAuth authorization, the access token of the user is ${accessToken} in the request (next to the user props)
+submitToHttpTarget :: WizardRequestContextC s m => Submission -> Project -> SettingsSubmissionDefinition -> SettingsSubmissionServiceRequest -> [Document] -> m (Either String SubmissionResult)
+submitToHttpTarget submission project definition request documents = do
   userProps <- getUserProps definition
-  let go mLocation [] = return . Right $ SubmissionResult {location = mLocation, returnedData = Nothing, externalId = Nothing, targetBaseUrl = Nothing}
-      go mLocation (document : rest) = do
-        content <- retrieveDocumentContent document.uuid
-        response <- uploadDocument request userProps content
-        case response of
-          Right mNewLocation -> go (maybe mLocation Just mNewLocation) rest
-          Left error -> return . Left $ "Sending the document '" ++ document.name ++ "' failed: " ++ error
-  go Nothing documents
+  eAccessToken <-
+    case (definitionOAuthProvider definition, submission.createdBy) of
+      (Just provider, Just userUuid) -> fmap Just <$> getValidAccessToken userUuid (Just project.workspaceUuid) provider
+      (Just _, Nothing) -> return (Left "The user who created the submission does not exist anymore.")
+      (Nothing, _) -> return (Right Nothing)
+  case eAccessToken of
+    Left error -> return (Left error)
+    Right mAccessToken -> sendDocuments (maybe userProps (\token -> M.insert "accessToken" token userProps) mAccessToken)
+  where
+   sendDocuments userProps = do
+    let go mLocation [] = return . Right $ SubmissionResult {location = mLocation, returnedData = Nothing, externalId = Nothing, targetBaseUrl = Nothing}
+        go mLocation (document : rest) = do
+          content <- retrieveDocumentContent document.uuid
+          response <- uploadDocument request userProps content
+          case response of
+            Right mNewLocation -> go (maybe mLocation Just mNewLocation) rest
+            Left error -> return . Left $ "Sending the document '" ++ document.name ++ "' failed: " ++ error
+    go Nothing documents
 
 getUserProps :: WizardRequestContextC s m => SettingsSubmissionDefinition -> m (M.Map String String)
 getUserProps definition = do

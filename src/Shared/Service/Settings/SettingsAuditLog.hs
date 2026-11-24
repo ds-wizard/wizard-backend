@@ -164,4 +164,6 @@ submissionChanges old new =
     :: AuditLogSettingsChanges
 
 redactHeaders :: SettingsSubmissionDefinition -> SettingsSubmissionDefinition
-redactHeaders = mapDefinitionRequest (\request -> request {headers = M.map (const "***") request.headers})
+redactHeaders =
+  mapDefinitionOAuth (\oauth -> oauth {clientSecret = if null oauth.clientSecret then "" else "***"})
+    . mapDefinitionRequest (\request -> request {headers = M.map (const "***") request.headers})

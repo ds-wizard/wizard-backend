@@ -128,7 +128,7 @@ import qualified Specs.Service.Project.Migration.Migrator.SanitizerSpec as PRJ_S
 import Specs.Service.Project.ProjectAclSpec
 import Specs.Service.Project.ProjectServiceSpec
 import Specs.Service.Submission.SubmissionServiceSpec
-import Specs.Service.Zenodo.ZenodoAuthServiceSpec
+import Specs.Service.OAuthServiceSpec
 import Specs.Service.Zenodo.ZenodoMetadataMapperSpec
 import Specs.Service.Project.ProjectValidationSpec
 import Specs.Service.Registry.Synchronization.RegistrySynchronizationServiceSpec
@@ -363,7 +363,7 @@ main =
               describe "Mcp" $ mcpServerServiceSpec requestContext
               persistentCommandServiceSpec requestContext
               submissionServiceSpec requestContext
-              zenodoAuthServiceSpec requestContext
+              oauthServiceSpec requestContext
               projectEventServiceIntegrationSpec requestContext
               registrySynchronizationServiceSpec requestContext
               typeHintServiceSpec requestContext

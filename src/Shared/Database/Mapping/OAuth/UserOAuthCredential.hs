@@ -1,16 +1,15 @@
-module Shared.Database.Mapping.Zenodo.UserZenodoCredential where
+module Shared.Database.Mapping.OAuth.UserOAuthCredential where
 
 import Database.PostgreSQL.Simple.FromRow
 import Database.PostgreSQL.Simple.ToField
 import Database.PostgreSQL.Simple.ToRow
 
-import Shared.Database.Mapping.Zenodo.ZenodoRepository ()
-import Shared.Model.Zenodo.UserZenodoCredential
+import Shared.Model.OAuth.UserOAuthCredential
 
-instance ToRow UserZenodoCredential where
-  toRow UserZenodoCredential {..} =
+instance ToRow UserOAuthCredential where
+  toRow UserOAuthCredential {..} =
     [ toField userUuid
-    , toField repository
+    , toField provider
     , toField accessToken
     , toField refreshToken
     , toField scope
@@ -20,10 +19,10 @@ instance ToRow UserZenodoCredential where
     , toField updatedAt
     ]
 
-instance FromRow UserZenodoCredential where
+instance FromRow UserOAuthCredential where
   fromRow = do
     userUuid <- field
-    repository <- field
+    provider <- field
     accessToken <- field
     refreshToken <- field
     scope <- field
@@ -31,4 +30,4 @@ instance FromRow UserZenodoCredential where
     tenantUuid <- field
     createdAt <- field
     updatedAt <- field
-    return UserZenodoCredential {..}
+    return UserOAuthCredential {..}

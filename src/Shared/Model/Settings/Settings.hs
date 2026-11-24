@@ -139,6 +139,9 @@ data SettingsSubmissionDefinition = SettingsSubmissionDefinition
   , description :: String
   , exports :: [SettingsSubmissionExport]
   , target :: SettingsSubmissionTarget
+  , connectOnSubmit :: Bool
+  -- ^ when the target needs an OAuth connection the user does not have yet, submitting starts the connection and
+  -- submits once connected (otherwise the user is told to connect in the profile first)
   }
   deriving (Generic, Eq, Show)
 
@@ -154,6 +157,7 @@ data SettingsSubmissionTarget
   = HttpSubmissionTarget
       { props :: [String]
       , request :: SettingsSubmissionServiceRequest
+      , oauth :: Maybe SettingsSubmissionOAuth
       }
   | ZenodoSubmissionTarget
       { repository :: ZenodoRepository
@@ -162,6 +166,17 @@ data SettingsSubmissionTarget
       , accessLevel :: String
       , community :: Maybe String
       }
+  deriving (Generic, Eq, Show)
+
+-- An optional OAuth 2.0 authorization (code flow with PKCE) of an HTTP target: each user connects their account once and
+-- the request can use the access token as ${accessToken}
+data SettingsSubmissionOAuth = SettingsSubmissionOAuth
+  { authorizeUrl :: String
+  , tokenUrl :: String
+  , clientId :: String
+  , clientSecret :: String
+  , scopes :: [String]
+  }
   deriving (Generic, Eq, Show)
 
 data ZenodoRepository
