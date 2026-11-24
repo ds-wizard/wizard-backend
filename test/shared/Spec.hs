@@ -127,6 +127,9 @@ import qualified Specs.Service.Project.Migration.Migrator.MoveSanitizerSpec as P
 import qualified Specs.Service.Project.Migration.Migrator.SanitizerSpec as PRJ_SanitizerSpec
 import Specs.Service.Project.ProjectAclSpec
 import Specs.Service.Project.ProjectServiceSpec
+import Specs.Service.Submission.SubmissionServiceSpec
+import Specs.Service.OAuthServiceSpec
+import Specs.Service.Zenodo.ZenodoMetadataMapperSpec
 import Specs.Service.Project.ProjectValidationSpec
 import Specs.Service.Registry.Synchronization.RegistrySynchronizationServiceSpec
 import Specs.Service.Report.ReportGeneratorSpec
@@ -236,6 +239,7 @@ main =
             describe "API" $ do
               apiSpec
               coordinateJMSpec
+            describe "SERVICE" $ zenodoMetadataMapperSpec
             describe "DATABASE" $ do
               daoCommonSpec
               permissionMappingSpec
@@ -358,6 +362,8 @@ main =
               mailerIntegrationSpec requestContext
               describe "Mcp" $ mcpServerServiceSpec requestContext
               persistentCommandServiceSpec requestContext
+              submissionServiceSpec requestContext
+              oauthServiceSpec requestContext
               projectEventServiceIntegrationSpec requestContext
               registrySynchronizationServiceSpec requestContext
               typeHintServiceSpec requestContext

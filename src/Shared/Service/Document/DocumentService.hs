@@ -82,8 +82,7 @@ getDocumentByUuid docUuid = do
   tml <- findDocumentTemplateByUuid doc.documentTemplateUuid
   format <- findDocumentTemplateFormatByDocumentTemplateIdAndUuid doc.documentTemplateUuid doc.formatUuid
   mVersion <- traverse (findProjectVersionByEventUuid' project.uuid) doc.projectEventUuid
-  submissions <- findDocumentSubmissions doc
-  return $ toDTOWithDocTemplate doc project (fmap (.name) (join mVersion)) submissions tml format
+  return $ toDTOWithDocTemplate doc project (fmap (.name) (join mVersion)) tml format
 
 createDocument :: WizardRequestContextC s m => DocumentCreateDTO -> m DocumentDTO
 createDocument reqDto =
@@ -97,15 +96,38 @@ createDocument reqDto =
     validateMetamodelVersion tml
     validateLanguageAvailability tml reqDto.language
     (ctx, mCutOffEventUuid) <- createProjectDocumentContext project reqDto.projectEventUuid
-    uuid <- liftIO generateUuid
-    mCurrentUser <- asks (.currentUser')
-    now <- liftIO getCurrentTimeInMicroseconds
-    let doc = fromCreateDTO reqDto uuid (Just ctx.hash) mCutOffEventUuid mCurrentUser project.tenantUuid project.workspaceUuid now
-    insertDocument doc
-    al_createDocument doc project tml format
-    emitEvent (DocumentCreatedEvent doc)
-    publishToPersistentCommandQueue doc tml format ctx
-    return $ toDTOWithDocTemplate doc project Nothing [] tml format
+    doc <- insertAndPublishDocument reqDto project tml format ctx mCutOffEventUuid
+    return $ toDTOWithDocTemplate doc project Nothing tml format
+
+-- Creates a persistent document from an already computed project context (e.g. several exports of one submission share it).
+-- The caller is responsible for the permission check and the transaction.
+createDocumentFromContext :: WizardRequestContextC s m => String -> Project -> DocumentTemplate -> DocumentTemplateFormatSimple -> DocumentContext -> Maybe U.UUID -> m Document
+createDocumentFromContext name project tml format ctx mCutOffEventUuid = do
+  checkDocumentLimit
+  checkStorageSize 0
+  validateMetamodelVersion tml
+  let reqDto =
+        DocumentCreateDTO
+          { name = name
+          , projectUuid = project.uuid
+          , projectEventUuid = Nothing
+          , documentTemplateUuid = tml.uuid
+          , formatUuid = format.uuid
+          , language = Nothing
+          }
+  insertAndPublishDocument reqDto project tml format ctx mCutOffEventUuid
+
+insertAndPublishDocument :: WizardRequestContextC s m => DocumentCreateDTO -> Project -> DocumentTemplate -> DocumentTemplateFormatSimple -> DocumentContext -> Maybe U.UUID -> m Document
+insertAndPublishDocument reqDto project tml format ctx mCutOffEventUuid = do
+  uuid <- liftIO generateUuid
+  mCurrentUser <- asks (.currentUser')
+  now <- liftIO getCurrentTimeInMicroseconds
+  let doc = fromCreateDTO reqDto uuid (Just ctx.hash) mCutOffEventUuid mCurrentUser project.tenantUuid project.workspaceUuid now
+  insertDocument doc
+  al_createDocument doc project tml format
+  emitEvent (DocumentCreatedEvent doc)
+  publishToPersistentCommandQueue doc tml format ctx
+  return doc
 
 deleteDocument :: WizardRequestContextC s m => U.UUID -> m ()
 deleteDocument docUuid =

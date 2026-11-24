@@ -1,6 +1,6 @@
 module Shared.Service.Settings.OrganizationSettingsService where
 
-import Control.Monad.Reader (asks)
+import Control.Monad.Reader (asks, liftIO)
 import qualified Data.UUID as U
 
 import Shared.Api.Resource.Settings.SettingsDTO
@@ -10,6 +10,7 @@ import Shared.Database.DAO.Settings.SettingsLoginScreenDAO
 import Shared.Database.DAO.Settings.SettingsLookAndFeelDAO
 import Shared.Database.DAO.Settings.SettingsRegistryDAO
 import Shared.Database.DAO.Settings.SettingsUsersDAO
+import Shared.Database.DAO.Settings.SettingsZenodoDAO
 import Shared.Model.Common.SensitiveData
 import Shared.Model.Config.WizardServerConfig
 import Shared.Model.Context.WizardRequestContext
@@ -17,6 +18,8 @@ import Shared.Model.Settings.Settings
 import Shared.Model.Settings.SettingsEM ()
 import Shared.Service.Settings.SettingsAuditLog
 import Shared.Service.Settings.SettingsService
+import Shared.Util.Crypto (decryptAES256WithRandomIV, encryptAES256WithRandomIV)
+import Shared.Util.Secret (maskSecret, unmaskSecret)
 
 getSettingsAuthentication :: WizardRequestContextC s m => m (SettingsDTO SettingsAuthentication)
 getSettingsAuthentication = getOrganizationSettings findSettingsAuthentication
@@ -66,3 +69,56 @@ saveEncryptedSettingsRegistry :: WizardRequestContextC s m => U.UUID -> Settings
 saveEncryptedSettingsRegistry tenantUuid settings = do
   serverConfig <- asks (.serverConfig')
   saveSettingsRegistry tenantUuid (process serverConfig.general.secret settings)
+
+-- Zenodo: the client secrets are stored encrypted and never returned (they show as ******** and ******** sent back
+-- keeps the stored value)
+getSettingsZenodo :: WizardRequestContextC s m => m (SettingsDTO SettingsZenodo)
+getSettingsZenodo = maskSettingsZenodoDTO <$> getOrganizationSettings findDecryptedSettingsZenodo
+
+modifySettingsZenodo :: WizardRequestContextC s m => SettingsDTO SettingsZenodo -> m (SettingsDTO SettingsZenodo)
+modifySettingsZenodo reqDto =
+  maskSettingsZenodoDTO <$> modifyOrganizationSettings (OrganizationSettings findDecryptedSettingsZenodo saveUnmasked (al_updateSection "zenodo" zenodoChanges)) reqDto
+  where
+    saveUnmasked tenantUuid settings = do
+      mCurrent <- findDecryptedSettingsZenodo tenantUuid
+      let unmask current new = new {clientSecret = unmaskSecret current.clientSecret new.clientSecret} :: SettingsZenodoRepository
+      let unmasked =
+            case mCurrent of
+              Just current -> settings {sandbox = unmask current.sandbox settings.sandbox, production = unmask current.production settings.production} :: SettingsZenodo
+              Nothing -> settings
+      saveEncryptedSettingsZenodo tenantUuid unmasked
+
+getCurrentSettingsZenodo :: WizardRequestContextC s m => m SettingsZenodo
+getCurrentSettingsZenodo = getCurrentSettings findDecryptedSettingsZenodo
+
+findDecryptedSettingsZenodo :: WizardRequestContextC s m => U.UUID -> m (Maybe SettingsZenodo)
+findDecryptedSettingsZenodo tenantUuid = do
+  serverConfig <- asks (.serverConfig')
+  let decrypt value = if null value then value else decryptAES256WithRandomIV serverConfig.general.secret value
+  fmap (mapSettingsZenodoSecrets decrypt) <$> findSettingsZenodo tenantUuid
+
+saveEncryptedSettingsZenodo :: WizardRequestContextC s m => U.UUID -> SettingsZenodo -> m ()
+saveEncryptedSettingsZenodo tenantUuid settings = do
+  serverConfig <- asks (.serverConfig')
+  let encrypt value = if null value then return value else encryptAES256WithRandomIV serverConfig.general.secret value
+  sandboxSecret <- liftIO $ encrypt settings.sandbox.clientSecret
+  productionSecret <- liftIO $ encrypt settings.production.clientSecret
+  saveSettingsZenodo
+    tenantUuid
+    ( settings
+        { sandbox = settings.sandbox {clientSecret = sandboxSecret} :: SettingsZenodoRepository
+        , production = settings.production {clientSecret = productionSecret} :: SettingsZenodoRepository
+        }
+        :: SettingsZenodo
+    )
+
+mapSettingsZenodoSecrets :: (String -> String) -> SettingsZenodo -> SettingsZenodo
+mapSettingsZenodoSecrets f settings =
+  settings
+    { sandbox = settings.sandbox {clientSecret = f settings.sandbox.clientSecret} :: SettingsZenodoRepository
+    , production = settings.production {clientSecret = f settings.production.clientSecret} :: SettingsZenodoRepository
+    }
+    :: SettingsZenodo
+
+maskSettingsZenodoDTO :: SettingsDTO SettingsZenodo -> SettingsDTO SettingsZenodo
+maskSettingsZenodoDTO dto = dto {value = mapSettingsZenodoSecrets maskSecret dto.value} :: SettingsDTO SettingsZenodo

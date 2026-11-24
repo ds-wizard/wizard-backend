@@ -29,6 +29,7 @@ import qualified Shared.Database.Migration.Development.Locale.LocaleSchemaMigrat
 import qualified Shared.Database.Migration.Development.MailTemplateLocale.MailTemplateLocaleMigration as MailTemplateLocale
 import qualified Shared.Database.Migration.Development.MailTemplateLocale.MailTemplateLocaleSchemaMigration as MailTemplateLocale
 import qualified Shared.Database.Migration.Development.Mcp.McpSchemaMigration as Mcp
+import qualified Shared.Database.Migration.Development.OAuth.OAuthSchemaMigration as OAuth
 import qualified Shared.Database.Migration.Development.OpenId.OpenIdClientMigration as OpenIdClient
 import qualified Shared.Database.Migration.Development.OpenId.OpenIdClientSchemaMigration as OpenIdClient
 import qualified Shared.Database.Migration.Development.OpenId.OpenIdClientSessionSchemaMigration as OpenIdClientSession
@@ -88,6 +89,7 @@ runMigration = do
   Prefab.dropTables
   PersistentCommand.dropTables
   Submission.dropTables
+  OAuth.dropTables
   UserEmailLink.dropTables
   Mcp.dropTables
   KnowledgeModelMigration.dropTables
@@ -147,6 +149,7 @@ runMigration = do
   Document.createTables
   KnowledgeModelMigration.createTables
   Submission.createTables
+  OAuth.createTables
   PersistentCommand.createTables
   Prefab.createTables
   TelemetryEvent.createTables

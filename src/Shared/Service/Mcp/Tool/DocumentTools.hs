@@ -16,8 +16,9 @@ import Shared.Api.Resource.Document.DocumentDTO
 import Shared.Api.Resource.Document.DocumentJM ()
 import Shared.Api.Resource.Mcp.Document.McpDocumentDownloadDTO
 import Shared.Api.Resource.Mcp.Document.McpDocumentDownloadJM ()
-import Shared.Api.Resource.Settings.SettingsJM ()
 import Shared.Api.Resource.Submission.SubmissionCreateDTO
+import Shared.Api.Resource.Submission.SubmissionDefinitionDTO
+import Shared.Api.Resource.Submission.SubmissionDefinitionJM ()
 import Shared.Api.Resource.Submission.SubmissionJM ()
 import Shared.Api.Resource.TemporaryFile.TemporaryFileDTO
 import Shared.Constant.Mcp
@@ -36,7 +37,6 @@ import Shared.Model.Error.Error
 import Shared.Model.Mcp.McpTool
 import Shared.Model.Mcp.McpToolset
 import Shared.Model.Project.Project
-import Shared.Model.Settings.Settings
 import Shared.Model.Submission.SubmissionList
 import Shared.Service.Document.DocumentService
 import Shared.Service.Mcp.Tool.DocumentTemplatePreviewMapper (isTextContentType)
@@ -55,8 +55,9 @@ documentTools =
   , createDocumentTool
   , downloadDocumentTool
   , deleteDocumentTool
-  , listDocumentSubmissionServicesTool
-  , submitDocumentTool
+  , listAvailableSubmissionsTool
+  , submitProjectTool
+  , listProjectSubmissionsTool
   ]
 
 listDocumentsTool :: forall s m. WizardRequestContextC s m => McpTool m
@@ -65,7 +66,7 @@ listDocumentsTool =
     { name = "list_documents"
     , title = "List documents"
     , description =
-        "List the documents generated from a project (project_uuid), newest first, with their state, format and submissions; "
+        "List the documents generated from a project (project_uuid), newest first, with their state and format; "
           ++ "without project_uuid, or filtered by document_template_uuid, it lists the documents of all projects, which needs projects.edit"
     , inputSchema = argumentsSchema arguments
     , outputSchema = Just $ pageSchema "documents" (jsonSchema (Proxy :: Proxy DocumentDTO))
@@ -190,7 +191,7 @@ deleteDocumentTool =
   McpTool
     { name = "delete_document"
     , title = "Delete document"
-    , description = "Delete a generated document with its file and submissions; needs EDIT on the project. It cannot be undone"
+    , description = "Delete a generated document with its file; needs EDIT on the project. It cannot be undone"
     , inputSchema = argumentsSchema documentUuidArgument
     , outputSchema = Just $ objectSchema [] []
     , annotations = destructiveAnnotations
@@ -201,30 +202,49 @@ deleteDocumentTool =
     , run = withArguments documentUuidArgument $ \uuid -> object [] <$ deleteDocument uuid
     }
 
-listDocumentSubmissionServicesTool :: WizardRequestContextC s m => McpTool m
-listDocumentSubmissionServicesTool =
+listAvailableSubmissionsTool :: WizardRequestContextC s m => McpTool m
+listAvailableSubmissionsTool =
   McpTool
-    { name = "list_document_submission_services"
-    , title = "List document submission services"
-    , description = "List the services (repositories) a document can be submitted to with submit_document; needs EDIT on the project"
-    , inputSchema = argumentsSchema documentUuidArgument
-    , outputSchema = Just $ objectSchema ["services"] [("services", arraySchema (jsonSchema (Proxy :: Proxy SettingsSubmissionServiceSimple)))]
+    { name = "list_available_submissions"
+    , title = "List available submissions"
+    , description =
+        "List the submissions (named by the administrator) a project can be submitted with submit_project, "
+          ++ "each with the documents (template and format) it generates and its target; needs EDIT on the project"
+    , inputSchema = argumentsSchema projectUuidArgument'
+    , outputSchema = Just $ objectSchema ["submissions"] [("submissions", arraySchema (jsonSchema (Proxy :: Proxy SubmissionDefinitionDTO)))]
     , annotations = readOnlyAnnotations
     , continuable = False
     , permissions = [_MCP_READ_ROLE_PERMISSION]
     , toolset = Just ProjectsMcpToolset
     , transactionState = NoTransaction
-    , run = withArguments documentUuidArgument $ fmap (\services -> object ["services" .= services]) . getAvailableServicesForSubmission
+    , run = withArguments projectUuidArgument' $ fmap (\submissions -> object ["submissions" .= submissions]) . getAvailableSubmissions
     }
 
-submitDocumentTool :: WizardRequestContextC s m => McpTool m
-submitDocumentTool =
+listProjectSubmissionsTool :: WizardRequestContextC s m => McpTool m
+listProjectSubmissionsTool =
   McpTool
-    { name = "submit_document"
-    , title = "Submit document"
+    { name = "list_project_submissions"
+    , title = "List project submissions"
+    , description = "List the submissions of a project, newest first, with their state, location and documents"
+    , inputSchema = argumentsSchema projectUuidArgument'
+    , outputSchema = Just $ objectSchema ["submissions"] [("submissions", arraySchema (jsonSchema (Proxy :: Proxy SubmissionList)))]
+    , annotations = readOnlyAnnotations
+    , continuable = False
+    , permissions = [_MCP_READ_ROLE_PERMISSION]
+    , toolset = Just ProjectsMcpToolset
+    , transactionState = NoTransaction
+    , run = withArguments projectUuidArgument' $ fmap (\submissions -> object ["submissions" .= submissions]) . getSubmissionsForProject
+    }
+
+submitProjectTool :: WizardRequestContextC s m => McpTool m
+submitProjectTool =
+  McpTool
+    { name = "submit_project"
+    , title = "Submit project"
     , description =
-        "Send a generated document to a submission service (list_document_submission_services) with your submission properties; "
-          ++ "the result is the submission with its state and location. "
+        "Submit a project with a submission (list_available_submissions): the documents it needs are generated from the current state of the project "
+          ++ "and sent to its target in the background with your submission properties; the result is the submission in progress, "
+          ++ "list_project_submissions shows its state and location later. "
           ++ confirmationDescription
     , inputSchema = argumentsSchema (confirmationArguments arguments)
     , outputSchema = Just $ confirmationOutputSchema (jsonSchema (Proxy :: Proxy SubmissionList))
@@ -233,22 +253,26 @@ submitDocumentTool =
     , permissions = [_MCP_READ_ROLE_PERMISSION, _MCP_WRITE_ROLE_PERMISSION]
     , toolset = Just ProjectsMcpToolset
     , transactionState = Transactional
-    , run = withConfirmation "submit_document" arguments (uncurry prepareSubmission)
+    , run = withConfirmation "submit_project" arguments (uncurry prepareSubmission)
     }
   where
-    arguments = (,) <$> documentUuidArgument <*> requiredArgument "service_id" "The id of the submission service"
+    arguments = (,) <$> projectUuidArgument' <*> requiredArgument "definition_id" "The id of the submission"
 
 prepareSubmission :: WizardRequestContextC s m => U.UUID -> String -> m (McpConfirmation m)
-prepareSubmission documentUuid serviceId = do
-  doc <- getDocumentByUuid documentUuid
-  services <- getAvailableServicesForSubmission documentUuid
-  service <- maybe (throwError . NotExistsError $ _ERROR_VALIDATION__ABSENCE "submission service") return (L.find ((== serviceId) . (.sId)) services)
+prepareSubmission projectUuid definitionId = do
+  project <- getProjectByUuid projectUuid
+  definitions <- getAvailableSubmissions projectUuid
+  definition <- maybe (throwError . NotExistsError $ _ERROR_VALIDATION__ABSENCE "submission") return (L.find ((== definitionId) . (.sId)) definitions)
+  submissions <- getSubmissionsForProject projectUuid
   return
     McpConfirmation
-      { summary = "Sends the document " ++ doc.name ++ " to " ++ service.name ++ "; the service may publish it and it cannot be taken back"
-      , revision = show (length doc.submissions)
-      , perform = toJSON <$> submitDocument documentUuid (SubmissionCreateDTO serviceId)
+      { summary = "Sends the project " ++ project.name ++ " with " ++ definition.name ++ "; the target may publish it and it cannot be taken back"
+      , revision = show (length submissions)
+      , perform = toJSON <$> createSubmission projectUuid (SubmissionCreateDTO definitionId)
       }
+
+projectUuidArgument' :: Arguments U.UUID
+projectUuidArgument' = requiredArgument "project_uuid" "The project"
 
 documentUuidArgument :: Arguments U.UUID
 documentUuidArgument = requiredArgument "document_uuid" "The document"

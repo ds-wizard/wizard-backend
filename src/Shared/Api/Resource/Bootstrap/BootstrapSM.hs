@@ -9,7 +9,7 @@ import Shared.Api.Resource.Bootstrap.WorkspaceBootstrapDTO
 import Shared.Api.Resource.Common.AesonSM ()
 import Shared.Api.Resource.Config.SimpleFeatureSM ()
 import Shared.Api.Resource.Settings.SettingsSM ()
-import Shared.Model.Config.SimpleFeature
+import Shared.Model.Settings.Settings
 import Shared.Model.Settings.SettingsDM
 import Shared.Util.Swagger
 
@@ -18,6 +18,9 @@ instance ToSchema BootstrapPrivacyDTO where
 
 instance ToSchema BootstrapCloudDTO where
   declareNamedSchema = toSwagger (BootstrapCloudDTO True "https://example.com/api")
+
+instance ToSchema BootstrapSubmissionDTO where
+  declareNamedSchema = toSwagger (BootstrapSubmissionDTO True [SandboxZenodoRepository])
 
 instance ToSchema WorkspaceBootstrapDTO where
   declareNamedSchema =
@@ -28,7 +31,7 @@ instance ToSchema WorkspaceBootstrapDTO where
           , dashboardAndMenu = defaultSettingsDashboardAndMenu
           , projects = defaultSettingsProjects
           , support = defaultSettingsSupport
-          , submission = SimpleFeature False
+          , submission = BootstrapSubmissionDTO False []
           , disabledPlugins = []
           , pluginSettings = M.empty
           }

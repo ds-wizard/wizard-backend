@@ -26,3 +26,9 @@ projectCacheComponent = "project_cache"
 
 sentryIgnoredComponents :: [String]
 sentryIgnoredComponents = [automationRunComponent]
+
+submissionComponent :: String
+submissionComponent = "submission"
+
+submissionSubmitFunction :: String
+submissionSubmitFunction = "submit"

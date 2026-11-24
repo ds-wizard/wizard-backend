@@ -82,10 +82,10 @@ editedSettingsSupport :: SettingsSupport
 editedSettingsSupport = settingsSupport {supportEmail = Just "support@example.com"}
 
 settingsSubmission :: SettingsSubmission
-settingsSubmission = SettingsSubmission {enabled = True, services = [settingsSubmissionService]}
+settingsSubmission = SettingsSubmission {enabled = True, definitions = [settingsSubmissionDefinition]}
 
 settingsSubmissionEmpty :: SettingsSubmission
-settingsSubmissionEmpty = SettingsSubmission {enabled = True, services = []}
+settingsSubmissionEmpty = SettingsSubmission {enabled = True, definitions = []}
 
 settingsSubmissionServiceApiTokenProp :: String
 settingsSubmissionServiceApiTokenProp = "API Token"
@@ -93,23 +93,50 @@ settingsSubmissionServiceApiTokenProp = "API Token"
 settingsSubmissionServiceSecretProp :: String
 settingsSubmissionServiceSecretProp = "Secret"
 
-settingsSubmissionService :: SettingsSubmissionService
-settingsSubmissionService =
-  SettingsSubmissionService
+settingsSubmissionDefinition :: SettingsSubmissionDefinition
+settingsSubmissionDefinition =
+  SettingsSubmissionDefinition
     { sId = "mySubmissionServer"
     , name = "My Submission Server"
     , description = "Some description"
-    , props = [settingsSubmissionServiceApiTokenProp, settingsSubmissionServiceSecretProp]
-    , supportedFormats = [settingsSubmissionServiceSupportedFormat]
-    , request = settingsSubmissionServiceRequest
+    , exports = [settingsSubmissionExport]
+    , target = settingsSubmissionHttpTarget
+    , connectOnSubmit = True
     }
 
-settingsSubmissionServiceSupportedFormat :: SettingsSubmissionServiceSupportedFormat
-settingsSubmissionServiceSupportedFormat =
-  SettingsSubmissionServiceSupportedFormat
+settingsSubmissionExport :: SettingsSubmissionExport
+settingsSubmissionExport =
+  SettingsSubmissionExport
     { id = wizardDocumentTemplate.id
     , version = wizardDocumentTemplate.version
     , formatName = formatJson.name
+    , madmpMetadata = False
+    }
+
+settingsSubmissionHttpTarget :: SettingsSubmissionTarget
+settingsSubmissionHttpTarget =
+  HttpSubmissionTarget
+    { props = [settingsSubmissionServiceApiTokenProp, settingsSubmissionServiceSecretProp]
+    , request = settingsSubmissionServiceRequest
+    , oauth = Nothing
+    }
+
+settingsSubmissionZenodoDefinition :: SettingsSubmissionDefinition
+settingsSubmissionZenodoDefinition =
+  SettingsSubmissionDefinition
+    { sId = "zenodoSandbox"
+    , name = "Zenodo Sandbox"
+    , description = "Deposit the DMP to Zenodo Sandbox"
+    , exports = [settingsSubmissionExport {madmpMetadata = True}]
+    , target =
+        ZenodoSubmissionTarget
+          { repository = SandboxZenodoRepository
+          , resourceType = "publication-datamanagementplan"
+          , licenseId = "cc-by-4.0"
+          , accessLevel = "public"
+          , community = Nothing
+          }
+    , connectOnSubmit = True
     }
 
 settingsSubmissionServiceRequest :: SettingsSubmissionServiceRequest
@@ -119,4 +146,34 @@ settingsSubmissionServiceRequest =
     , url = "https://mockserver.ds-wizard.org/submission.json"
     , headers = M.fromList [("Api-Key", "${API Token}")]
     , multipart = SettingsSubmissionServiceRequestMultipart {enabled = False, fileName = "file"}
+    }
+
+settingsZenodo :: SettingsZenodo
+settingsZenodo =
+  SettingsZenodo
+    { sandbox = SettingsZenodoRepository {enabled = True, clientId = "sandbox-client-id", clientSecret = "sandbox-client-secret"}
+    , production = defaultSettingsZenodoRepository
+    }
+
+settingsSubmissionOAuth :: SettingsSubmissionOAuth
+settingsSubmissionOAuth =
+  SettingsSubmissionOAuth
+    { authorizeUrl = "https://repository.example.org/oauth/authorize"
+    , tokenUrl = "https://repository.example.org/oauth/token"
+    , clientId = "repository-client-id"
+    , clientSecret = "repository-client-secret"
+    , scopes = ["deposit"]
+    }
+
+settingsSubmissionOAuthDefinition :: SettingsSubmissionDefinition
+settingsSubmissionOAuthDefinition =
+  settingsSubmissionDefinition
+    { sId = "oauthRepository"
+    , name = "OAuth Repository"
+    , target =
+        HttpSubmissionTarget
+          { props = []
+          , request = settingsSubmissionServiceRequest {headers = M.fromList [("Authorization", "Bearer ${accessToken}")]}
+          , oauth = Just settingsSubmissionOAuth
+          }
     }

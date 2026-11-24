@@ -1,5 +1,5 @@
-module Specs.Service.Mcp.Tool.DocumentTools.ListDocumentSubmissionServices (
-  list_document_submission_services,
+module Specs.Service.Mcp.Tool.DocumentTools.ListAvailableSubmissions (
+  list_available_submissions,
 ) where
 
 import Data.Aeson
@@ -8,11 +8,10 @@ import Network.Wai (Application)
 import Test.Hspec
 import Test.Hspec.Wai hiding (shouldRespondWith)
 
-import Shared.Api.Resource.Settings.SettingsJM ()
-import Shared.Database.Migration.Development.Settings.Data.Settings
+import Shared.Api.Resource.Submission.SubmissionDefinitionJM ()
 import Shared.Database.Migration.Development.Settings.SettingsMigration
 import Shared.Model.User.RolePermission
-import Shared.Service.Submission.SubmissionService (toSubmissionServiceSimple)
+import Shared.Database.Migration.Development.Submission.Data.Submissions
 import SharedTest.Specs.Api.Common
 import SharedTest.Specs.Api.Mcp
 import WizardServer.Model.Context.RequestContext
@@ -22,11 +21,11 @@ import Specs.Common
 import Specs.Service.Mcp.Tool.DocumentTools.Common
 
 -- ------------------------------------------------------------------------
--- POST /api/mcp (list_document_submission_services)
+-- POST /api/mcp (list_available_submissions)
 -- ------------------------------------------------------------------------
-list_document_submission_services :: RequestContext -> SpecWith ((), Application)
-list_document_submission_services requestContext =
-  describe "POST /api/mcp (list_document_submission_services)" $ do
+list_available_submissions :: RequestContext -> SpecWith ((), Application)
+list_available_submissions requestContext =
+  describe "POST /api/mcp (list_available_submissions)" $ do
     test_200 requestContext
     test_401 requestContext
     test_403 requestContext
@@ -40,9 +39,9 @@ reqUrl = "/api/mcp"
 
 reqHeaders = [reqAuthHeader, reqCtHeader]
 
-reqArguments = documentArguments []
+reqArguments = projectArguments []
 
-reqBody = toolCallBody "list_document_submission_services" reqArguments
+reqBody = toolCallBody "list_available_submissions" reqArguments
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------
@@ -53,18 +52,18 @@ test_200 requestContext =
     do
       let expStatus = 200
       let expHeaders = resCtHeader : resCorsHeaders
-      let expContent = object ["services" .= [toSubmissionServiceSimple settingsSubmissionService]]
+      let expContent = object ["submissions" .= [settingsSubmissionDefinitionDto]]
       let expDto = toolResult expContent
       -- AND: Run migrations
       runDocumentMigrations requestContext
-      runInContextIO seedSettingsSubmissionService requestContext
+      runInContextIO seedSettingsSubmissionDefinition requestContext
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody
       -- THEN: Compare response with expectation
       let responseMatcher =
             ResponseMatcher {matchHeaders = expHeaders, matchStatus = expStatus, matchBody = bodyEqualsJson expDto}
       response `shouldRespondWith` responseMatcher
-      assertToolOutputSchema reqHeaders "list_document_submission_services" expContent
+      assertToolOutputSchema reqHeaders "list_available_submissions" expContent
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------

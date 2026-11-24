@@ -105,8 +105,8 @@ create_test_200 title requestContext authHeader =
             Page
               "documents"
               (PageMetadata 20 2 1 0)
-              [ toDTOWithDocTemplate doc1' project6 (Just "Version 1") []
-              , toDTOWithDocTemplate doc2' project6 (Just "Version 1") []
+              [ toDTOWithDocTemplate doc1' project6 (Just "Version 1")
+              , toDTOWithDocTemplate doc2' project6 (Just "Version 1")
               ]
       let expBody = encode (fmap (\x -> x wizardDocumentTemplate formatJsonSimple) expDto)
       -- WHEN: Call API
@@ -138,7 +138,7 @@ test_200_workspace requestContext =
       -- AND: Prepare expectation
       let expStatus = 200
       let expHeaders = resCtHeader : resCorsHeaders
-      let expDto = Page "documents" (PageMetadata 20 1 1 0) [toDTOWithDocTemplate secondWorkspaceDoc project16 Nothing [] wizardDocumentTemplate formatJsonSimple]
+      let expDto = Page "documents" (PageMetadata 20 1 1 0) [toDTOWithDocTemplate secondWorkspaceDoc project16 Nothing wizardDocumentTemplate formatJsonSimple]
       let expBody = encode expDto
       -- WHEN: Call API
       response <- request reqMethod reqUrl reqHeaders reqBody

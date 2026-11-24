@@ -105,6 +105,23 @@ _ERROR_SERVICE_DOCUMENT__TEMPLATE_OR_FORMAT_NOT_SET_UP =
 _ERROR_SERVICE_DOCUMENT__PROJECT_OR_FORMAT_NOT_SET_UP =
   LocaleRecord "error.service.template.project_or_format_not_set_up" "Project or format is not set up" []
 
+-- Submission
+_ERROR_SERVICE_SUBMISSION__DEFINITION_NOT_AVAILABLE definitionId =
+  LocaleRecord "error.service.submission.definition_not_available" "Submission '%s' is not available for this project" [definitionId]
+
+_ERROR_SERVICE_SUBMISSION__NOT_CONNECTED name =
+  LocaleRecord "error.service.submission.not_connected" "Connect your account of %s in your profile first" [name]
+
+-- OAuth
+_ERROR_SERVICE_OAUTH__PROVIDER_NOT_AVAILABLE provider =
+  LocaleRecord "error.service.oauth.provider_not_available" "The connection '%s' is not configured" [provider]
+
+_ERROR_SERVICE_OAUTH__INVALID_STATE =
+  LocaleRecord "error.service.oauth.invalid_state" "The authorization is invalid or expired, please connect again" []
+
+_ERROR_SERVICE_OAUTH__CONNECTION_FAILED detail =
+  LocaleRecord "error.service.oauth.connection_failed" "Connecting the account failed: %s" [detail]
+
 -- Auth
 _ERROR_SERVICE_AUTH__SERVICE_NOT_DEFINED authId =
   LocaleRecord "error.service.auth.service_not_defined" "Service '%s' is not defined" [authId]

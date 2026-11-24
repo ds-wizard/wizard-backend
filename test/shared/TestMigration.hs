@@ -41,6 +41,7 @@ import qualified Shared.Database.Migration.Development.Locale.LocaleSchemaMigrat
 import qualified Shared.Database.Migration.Development.MailTemplateLocale.MailTemplateLocaleMigration as MailTemplateLocaleMigration
 import qualified Shared.Database.Migration.Development.MailTemplateLocale.MailTemplateLocaleSchemaMigration as MailTemplateLocale
 import qualified Shared.Database.Migration.Development.Mcp.McpSchemaMigration as Mcp
+import qualified Shared.Database.Migration.Development.OAuth.OAuthSchemaMigration as OAuth
 import qualified Shared.Database.Migration.Development.OpenId.OpenIdClientSchemaMigration as OpenIdClient
 import qualified Shared.Database.Migration.Development.PersistentCommand.PersistentCommandSchemaMigration as PersistentCommand
 import Shared.Database.Migration.Development.Plugin.Data.Plugins
@@ -100,6 +101,7 @@ buildSchema requestContext = do
   runInContext Prefab.dropTables requestContext
   runInContext PersistentCommand.dropTables requestContext
   runInContext Submission.dropTables requestContext
+  runInContext OAuth.dropTables requestContext
   runInContext UserEmailLink.dropTables requestContext
   runInContext Mcp.dropTables requestContext
   runInContext KnowledgeModelMigration.dropTables requestContext
@@ -158,6 +160,7 @@ buildSchema requestContext = do
   runInContext Document.createTables requestContext
   runInContext KnowledgeModelMigration.createTables requestContext
   runInContext Submission.createTables requestContext
+  runInContext OAuth.createTables requestContext
   runInContext PersistentCommand.createTables requestContext
   runInContext Prefab.createTables requestContext
   runInContext TelemetryEvent.createTables requestContext
@@ -247,12 +250,15 @@ deleteAllEntitiesSql =
     , "telemetry_event"
     , "prefab"
     , "persistent_command"
+    , "oauth_session"
+    , "user_oauth_credential"
+    , "submission_document"
     , "submission"
     , "config_mail"
     , "settings_features"
-    , "settings_submission_service_supported_format"
-    , "settings_submission_service_request_header"
-    , "settings_submission_service"
+    , "settings_zenodo"
+    , "settings_submission_definition_export"
+    , "settings_submission_definition"
     , "settings_submission"
     , "settings_projects"
     , "settings_registry"

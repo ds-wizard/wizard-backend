@@ -168,7 +168,7 @@ doc1Create =
     }
 
 doc1Dto :: DocumentDTO
-doc1Dto = toDTOWithDocTemplate doc1 project1 Nothing [] wizardDocumentTemplate formatJsonSimple
+doc1Dto = toDTOWithDocTemplate doc1 project1 Nothing wizardDocumentTemplate formatJsonSimple
 
 doc2 :: Document
 doc2 =

@@ -6,6 +6,7 @@ import qualified WizardServer.Database.Migration.Production.Migration_4_35_0.Mig
 import qualified WizardServer.Database.Migration.Production.Migration_4_35_2.Migration as M_4_35_2
 import qualified WizardServer.Database.Migration.Production.Migration_5_0_0.Migration as M_5_0_0
 import qualified WizardServer.Database.Migration.Production.Migration_5_1_0.Migration as M_5_1_0
+import qualified WizardServer.Database.Migration.Production.Migration_5_2_0.Migration as M_5_2_0
 
 migrationDefinitions :: [MigrationDefinition]
 migrationDefinitions =
@@ -13,4 +14,5 @@ migrationDefinitions =
   , M_4_35_2.definition
   , M_5_0_0.definition
   , M_5_1_0.definition
+  , M_5_2_0.definition
   ]

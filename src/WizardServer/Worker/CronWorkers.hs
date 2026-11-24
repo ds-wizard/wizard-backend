@@ -1,8 +1,11 @@
 module WizardServer.Worker.CronWorkers where
 
 import Control.Monad (void)
+import Control.Monad.Reader (asks)
 
 import Shared.Database.DAO.OpenId.OpenIdClientSessionDAO
+import Shared.Service.Submission.SubmissionService (timeOutSubmissions)
+import Shared.Database.DAO.OAuth.OAuthSessionDAO (deleteExpiredOAuthSessions)
 import Shared.Database.VacuumCleaner
 import Shared.Model.Cache.ServerCache
 import Shared.Model.Config.ServerConfig
@@ -25,6 +28,8 @@ workers =
     ++ [ userEmailLinkWorker
        , persistentCommandRetryWorker
        , persistentCommandRetryLambdaWorker
+       , submissionTimeoutWorker
+       , cleanOAuthSessionWorker
        , cleanUserTokenWorker
        , expireUserTokenWorker
        , cleanUserRegistrationPendingWorker
@@ -60,6 +65,28 @@ persistentCommandRetryLambdaWorker =
     , cron = (.serverConfig'.persistentCommand.retryLambdaJob.cron)
     , function = retryPersistentCommandsForLambda PersistentCommandExecutor.components
     , wrapInTransaction = False
+    }
+
+submissionTimeoutWorker :: (WizardServerContextType s, WizardRequestContextC r rm) => CronWorker s rm
+submissionTimeoutWorker =
+  CronWorker
+    { name = "SubmissionTimeoutWorker"
+    , condition = (.serverConfig'.submission.timeoutJob.enabled)
+    , cron = (.serverConfig'.submission.timeoutJob.cron)
+    , function = do
+        timeoutInMinutes <- asks (.serverConfig'.submission.timeoutInMinutes)
+        timeOutSubmissions timeoutInMinutes
+    , wrapInTransaction = True
+    }
+
+cleanOAuthSessionWorker :: (WizardServerContextType s, WizardRequestContextC r rm) => CronWorker s rm
+cleanOAuthSessionWorker =
+  CronWorker
+    { name = "CleanOAuthSessionWorker"
+    , condition = const True
+    , cron = const "*/30 * * * *"
+    , function = void deleteExpiredOAuthSessions
+    , wrapInTransaction = True
     }
 
 cleanUserTokenWorker :: (WizardServerContextType s, WizardRequestContextC r rm) => CronWorker s rm

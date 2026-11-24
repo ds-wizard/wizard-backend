@@ -16,8 +16,8 @@ type List_POST =
   Header "Authorization" String
     :> Header "Host" String
     :> ReqBody '[SafeJSON] SubmissionCreateDTO
-    :> "documents"
-    :> Capture "docUuid" U.UUID
+    :> "projects"
+    :> Capture "projectUuid" U.UUID
     :> "submissions"
     :> PostCreated '[SafeJSON] (Headers '[Header "x-trace-uuid" String] SubmissionList)
 
@@ -28,6 +28,6 @@ list_POST
   -> SubmissionCreateDTO
   -> U.UUID
   -> sm (Headers '[Header "x-trace-uuid" String] SubmissionList)
-list_POST mTokenHeader mServerUrl reqDto docUuid =
+list_POST mTokenHeader mServerUrl reqDto projectUuid =
   getAuthServiceExecutor mTokenHeader mServerUrl $ \runInAuthService ->
-    runInAuthService Transactional $ addTraceUuidHeader =<< submitDocument docUuid reqDto
+    runInAuthService Transactional $ addTraceUuidHeader =<< createSubmission projectUuid reqDto

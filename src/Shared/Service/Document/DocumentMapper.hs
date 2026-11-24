@@ -20,15 +20,14 @@ import Shared.Model.KnowledgeModel.Editor.KnowledgeModelEditor
 import Shared.Model.PersistentCommand.PersistentCommand
 import Shared.Model.Project.Project
 import Shared.Model.Project.ProjectSimple
-import Shared.Model.Submission.SubmissionList
 import Shared.Model.Tenant.Limit.TenantLimitBundleChange
 import Shared.Service.DocumentTemplate.WizardDocumentTemplateMapper
 import Shared.Service.PersistentCommand.PersistentCommandMapper
 import Shared.Util.JSON
 import Shared.Util.String (trim)
 
-toDTO :: DocumentList -> [SubmissionList] -> DocumentDTO
-toDTO doc submissions =
+toDTO :: DocumentList -> DocumentDTO
+toDTO doc =
   DocumentDTO
     { uuid = doc.uuid
     , name = doc.name
@@ -44,14 +43,13 @@ toDTO doc submissions =
         case doc.state of
           ErrorDocumentState -> doc.workerLog
           _ -> Nothing
-    , submissions = submissions
     , createdBy = doc.createdBy
     , createdAt = doc.createdAt
     , workspaceUuid = doc.workspaceUuid
     }
 
-toDTOWithDocTemplate :: Document -> Project -> Maybe String -> [SubmissionList] -> DocumentTemplate -> DocumentTemplateFormatSimple -> DocumentDTO
-toDTOWithDocTemplate doc project mProjectVersion submissions dt format =
+toDTOWithDocTemplate :: Document -> Project -> Maybe String -> DocumentTemplate -> DocumentTemplateFormatSimple -> DocumentDTO
+toDTOWithDocTemplate doc project mProjectVersion dt format =
   DocumentDTO
     { uuid = doc.uuid
     , name = doc.name
@@ -67,7 +65,6 @@ toDTOWithDocTemplate doc project mProjectVersion submissions dt format =
         case doc.state of
           ErrorDocumentState -> doc.workerLog
           _ -> Nothing
-    , submissions = submissions
     , createdBy = doc.createdBy
     , createdAt = doc.createdAt
     , workspaceUuid = doc.workspaceUuid

@@ -12,4 +12,5 @@ data BootstrapSettings = BootstrapSettings
   , lookAndFeel :: SettingsLookAndFeel
   , users :: SettingsUsers
   , registry :: SettingsRegistry
+  , zenodo :: SettingsZenodo
   }

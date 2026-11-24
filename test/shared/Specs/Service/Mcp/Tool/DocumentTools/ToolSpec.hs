@@ -10,9 +10,9 @@ import WizardServer.Model.Context.RequestContext
 import Specs.Service.Mcp.Tool.DocumentTools.CreateDocument
 import Specs.Service.Mcp.Tool.DocumentTools.DeleteDocument
 import Specs.Service.Mcp.Tool.DocumentTools.DownloadDocument
-import Specs.Service.Mcp.Tool.DocumentTools.ListDocumentSubmissionServices
+import Specs.Service.Mcp.Tool.DocumentTools.ListAvailableSubmissions
 import Specs.Service.Mcp.Tool.DocumentTools.ListDocuments
-import Specs.Service.Mcp.Tool.DocumentTools.SubmitDocument
+import Specs.Service.Mcp.Tool.DocumentTools.SubmitProject
 
 documentToolsSpec :: RequestContext -> SpecWith ((), Application)
 documentToolsSpec requestContext = do
@@ -20,5 +20,5 @@ documentToolsSpec requestContext = do
   create_document requestContext
   download_document requestContext
   delete_document requestContext
-  list_document_submission_services requestContext
-  submit_document requestContext
+  list_available_submissions requestContext
+  submit_project requestContext

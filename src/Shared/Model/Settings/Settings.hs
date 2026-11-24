@@ -129,24 +129,72 @@ data SettingsSupport = SettingsSupport
 
 data SettingsSubmission = SettingsSubmission
   { enabled :: Bool
-  , services :: [SettingsSubmissionService]
+  , definitions :: [SettingsSubmissionDefinition]
   }
   deriving (Generic, Eq, Show)
 
-data SettingsSubmissionService = SettingsSubmissionService
+data SettingsSubmissionDefinition = SettingsSubmissionDefinition
   { sId :: String
   , name :: String
   , description :: String
-  , props :: [String]
-  , supportedFormats :: [SettingsSubmissionServiceSupportedFormat]
-  , request :: SettingsSubmissionServiceRequest
+  , exports :: [SettingsSubmissionExport]
+  , target :: SettingsSubmissionTarget
+  , connectOnSubmit :: Bool
+  -- ^ when the target needs an OAuth connection the user does not have yet, submitting starts the connection and
+  -- submits once connected (otherwise the user is told to connect in the profile first)
   }
   deriving (Generic, Eq, Show)
 
-data SettingsSubmissionServiceSupportedFormat = SettingsSubmissionServiceSupportedFormat
+data SettingsSubmissionExport = SettingsSubmissionExport
   { id :: String
   , version :: String
   , formatName :: String
+  , madmpMetadata :: Bool
+  }
+  deriving (Generic, Eq, Show)
+
+data SettingsSubmissionTarget
+  = HttpSubmissionTarget
+      { props :: [String]
+      , request :: SettingsSubmissionServiceRequest
+      , oauth :: Maybe SettingsSubmissionOAuth
+      }
+  | ZenodoSubmissionTarget
+      { repository :: ZenodoRepository
+      , resourceType :: String
+      , licenseId :: String
+      , accessLevel :: String
+      , community :: Maybe String
+      }
+  deriving (Generic, Eq, Show)
+
+-- An optional OAuth 2.0 authorization (code flow with PKCE) of an HTTP target: each user connects their account once and
+-- the request can use the access token as ${accessToken}
+data SettingsSubmissionOAuth = SettingsSubmissionOAuth
+  { authorizeUrl :: String
+  , tokenUrl :: String
+  , clientId :: String
+  , clientSecret :: String
+  , scopes :: [String]
+  }
+  deriving (Generic, Eq, Show)
+
+data ZenodoRepository
+  = SandboxZenodoRepository
+  | ProductionZenodoRepository
+  deriving (Generic, Eq, Show, Read, Ord, Enum, Bounded)
+
+-- OAuth applications registered in Zenodo (one per repository), used to connect the accounts of the users
+data SettingsZenodo = SettingsZenodo
+  { sandbox :: SettingsZenodoRepository
+  , production :: SettingsZenodoRepository
+  }
+  deriving (Generic, Eq, Show)
+
+data SettingsZenodoRepository = SettingsZenodoRepository
+  { enabled :: Bool
+  , clientId :: String
+  , clientSecret :: String
   }
   deriving (Generic, Eq, Show)
 
@@ -161,12 +209,5 @@ data SettingsSubmissionServiceRequest = SettingsSubmissionServiceRequest
 data SettingsSubmissionServiceRequestMultipart = SettingsSubmissionServiceRequestMultipart
   { enabled :: Bool
   , fileName :: String
-  }
-  deriving (Generic, Eq, Show)
-
-data SettingsSubmissionServiceSimple = SettingsSubmissionServiceSimple
-  { sId :: String
-  , name :: String
-  , description :: String
   }
   deriving (Generic, Eq, Show)

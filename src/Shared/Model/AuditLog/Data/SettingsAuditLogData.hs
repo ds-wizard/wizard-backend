@@ -79,7 +79,9 @@ data AuditLogSettingsChanges = AuditLogSettingsChanges
   , supportSiteUrl :: Maybe (Change (Maybe String))
   , supportSiteIcon :: Maybe (Change (Maybe String))
   , enabled :: Maybe (Change Bool)
-  , services :: Maybe (Change [SettingsSubmissionService])
+  , definitions :: Maybe (Change [SettingsSubmissionDefinition])
+  , sandbox :: Maybe (Change SettingsZenodoRepository)
+  , production :: Maybe (Change SettingsZenodoRepository)
   , regularSynchronization :: Maybe (Change AuditLogRegularSynchronization)
   }
   deriving (Show, Eq, Generic)
@@ -118,6 +120,8 @@ noSettingsChanges =
     , supportSiteUrl = Nothing
     , supportSiteIcon = Nothing
     , enabled = Nothing
-    , services = Nothing
+    , definitions = Nothing
+    , sandbox = Nothing
+    , production = Nothing
     , regularSynchronization = Nothing
     }

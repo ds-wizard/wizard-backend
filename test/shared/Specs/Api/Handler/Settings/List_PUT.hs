@@ -193,8 +193,9 @@ test_200_override_not_allowed_deletes_children requestContext =
     -- THEN: Compare response with expectation
     expectJson 200 (SettingsDTO settingsSubmissionEmpty (Just False) Nothing) response
     -- AND: Find result in DB and compare with expectation state
-    counts <- traverse (`countWorkspaceRows` requestContext) (Submission.table : Submission.childTables)
-    liftIO $ counts `shouldBe` [0, 0, 0, 0]
+    let tables = Submission.table : Submission.childTables
+    counts <- traverse (`countWorkspaceRows` requestContext) tables
+    liftIO $ counts `shouldBe` fmap (const 0) tables
 
 test_400_override_not_allowed requestContext =
   it "HTTP 400 BAD REQUEST (w when the organization does not allow overrides)" $ do

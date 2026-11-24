@@ -15,14 +15,17 @@ instance ToField SubmissionState where
 instance FromField SubmissionState where
   fromField = fromFieldGenericEnum
 
+-- The order follows Shared.Database.DAO.Submission.SubmissionDAO.submissionColumns
 instance ToRow Submission where
   toRow Submission {..} =
     [ toField uuid
     , toField state
     , toField location
     , toField returnedData
-    , toField serviceId
-    , toField documentUuid
+    , toField definitionId
+    , toField projectUuid
+    , toField externalId
+    , toField targetBaseUrl
     , toField createdBy
     , toField createdAt
     , toField updatedAt
@@ -35,10 +38,30 @@ instance FromRow Submission where
     state <- field
     location <- field
     returnedData <- field
-    serviceId <- field
-    documentUuid <- field
+    definitionId <- field
+    projectUuid <- field
+    externalId <- field
+    targetBaseUrl <- field
     createdBy <- field
     createdAt <- field
     updatedAt <- field
     tenantUuid <- field
     return $ Submission {..}
+
+instance ToRow SubmissionDocument where
+  toRow SubmissionDocument {..} =
+    [ toField submissionUuid
+    , toField position
+    , toField documentUuid
+    , toField madmpMetadata
+    , toField tenantUuid
+    ]
+
+instance FromRow SubmissionDocument where
+  fromRow = do
+    submissionUuid <- field
+    position <- field
+    documentUuid <- field
+    madmpMetadata <- field
+    tenantUuid <- field
+    return SubmissionDocument {..}

@@ -111,3 +111,10 @@ decodePEM bs = case pemParseBS bs of
     case filter ((== "PUBLIC KEY") . pemName) pems of
       [] -> Left "No valid RSA public key found"
       (pem : _) -> Right $ pemContent pem
+
+-- PKCE (RFC 7636): the S256 code challenge of a code verifier
+pkceCodeChallenge :: String -> String
+pkceCodeChallenge verifier =
+  let digest :: Digest SHA256
+      digest = hash (BS.pack verifier)
+   in BS.unpack . convertToBase Base64URLUnpadded $ digest

@@ -16,6 +16,8 @@ runMigration = do
   deleteSubmissions
   saveSettingsSubmission defaultTenant.uuid Nothing settingsSubmission
   insertSubmission submission1
+  insertSubmissionDocuments submission1Documents
   saveSettingsSubmission differentTenant.uuid Nothing settingsSubmission
   insertSubmission differentSubmission1
+  insertSubmissionDocuments differentSubmission1Documents
   logInfo _CMP_MIGRATION "(Submission/Submission) ended"

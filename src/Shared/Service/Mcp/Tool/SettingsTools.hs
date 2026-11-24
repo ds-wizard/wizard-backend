@@ -109,7 +109,7 @@ getSettingsTool sections =
         "Get one settings section of the organization (tenant: true) or of a workspace (workspace_uuid). "
           ++ "In a workspace, dashboard-and-menu, projects, support and submission show the override of the workspace when it has one (overridden) and the organization value otherwise, "
           ++ "and overrideAllowed tells whether workspaces may override them; roles holds the default role of new members of the organization or of the workspace; "
-          ++ "the other sections exist only at the organization level. Secrets (the header values of the submission services, "
+          ++ "the other sections exist only at the organization level. Secrets (the request header values of the HTTP targets of the submission definitions, "
           ++ "the API key of registry) show as ********. Reading authentication needs mcp.sensitive"
     , inputSchema = argumentsSchema arguments
     , outputSchema = Just $ settingsSchema sections
@@ -133,8 +133,8 @@ updateSettingsTool sections =
           ++ "nested objects are merged field by field and lists are replaced as a whole. A change in a workspace creates or changes its override of "
           ++ "dashboard-and-menu, projects, support or submission (when the organization allows overrides); reset_override: true removes that override, so that the workspace "
           ++ "follows the organization again. override_allowed decides at the organization level whether workspaces may override the section; false removes their overrides. "
-          ++ "Changing authentication, roles, submission or registry needs mcp.sensitive. The header values of the submission services and the API key of registry are secrets: "
-          ++ "they show as ******** and ******** sent back keeps the stored value, except for a submission service whose request url changes in the same call"
+          ++ "Changing authentication, roles, submission or registry needs mcp.sensitive. The request header values of the submission definitions and the API key of registry are secrets: "
+          ++ "they show as ******** and ******** sent back keeps the stored value, except for a submission definition whose request url changes in the same call"
     , inputSchema = argumentsSchema arguments
     , outputSchema = Just $ describedSchema "The section, shaped as get_settings returns it" (typeSchema "object")
     , annotations = idempotentWriteAnnotations

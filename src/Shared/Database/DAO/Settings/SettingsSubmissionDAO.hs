@@ -5,6 +5,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.UUID as U
 import Database.PostgreSQL.Simple (Only (..), (:.) (..))
 import Database.PostgreSQL.Simple.ToField
+import Database.PostgreSQL.Simple.ToRow
 
 import Shared.Database.DAO.Settings.SettingsDAO
 import Shared.Database.Mapping.Settings.SettingsSubmission ()
@@ -14,20 +15,20 @@ import Shared.Model.Settings.Settings
 table :: String
 table = "settings_submission"
 
-serviceTable :: String
-serviceTable = "settings_submission_service"
+definitionTable :: String
+definitionTable = "settings_submission_definition"
 
-headerTable :: String
-headerTable = "settings_submission_service_request_header"
-
-supportedFormatTable :: String
-supportedFormatTable = "settings_submission_service_supported_format"
+exportTable :: String
+exportTable = "settings_submission_definition_export"
 
 childTables :: [String]
-childTables = [headerTable, supportedFormatTable, serviceTable]
+childTables = [exportTable, definitionTable]
 
-serviceColumns :: [String]
-serviceColumns = ["id", "name", "description", "props", "request_method", "request_url", "request_multipart_enabled", "request_multipart_file_name"]
+definitionColumns :: [String]
+definitionColumns = ["id", "name", "description", "target", "connect_on_submit"]
+
+exportColumns :: [String]
+exportColumns = ["id", "version", "format_name", "madmp_metadata"]
 
 findSettingsSubmission :: WizardRequestContextC s m => U.UUID -> Maybe U.UUID -> m (Maybe SettingsSubmission)
 findSettingsSubmission tenantUuid mWorkspaceUuid = do
@@ -36,31 +37,26 @@ findSettingsSubmission tenantUuid mWorkspaceUuid = do
   case mSettings of
     Nothing -> return Nothing
     Just settings -> do
-      services <- findSettingsRows serviceColumns "ORDER BY id" (childKey serviceTable key)
-      supportedFormats <- groupByServiceId <$> findSettingsRows ["service_id", "id", "version", "format_name"] "ORDER BY id, version, format_name" (childKey supportedFormatTable key)
-      headers <- groupByServiceId <$> findSettingsRows ["service_id", "name", "value"] "ORDER BY name" (childKey headerTable key)
-      return . Just $ settings {services = fmap (withServiceChildren supportedFormats headers) services}
+      definitions <- findSettingsChildRows definitionColumns (childKey definitionTable key)
+      exports <- groupByDefinitionId <$> findSettingsRows ("definition_id" : exportColumns) "ORDER BY definition_id, position" (childKey exportTable key)
+      return . Just $ settings {definitions = fmap (withExports exports) definitions}
 
-withServiceChildren :: M.Map String [SettingsSubmissionServiceSupportedFormat] -> M.Map String [(String, String)] -> SettingsSubmissionService -> SettingsSubmissionService
-withServiceChildren supportedFormats headers service =
-  service
-    { supportedFormats = M.findWithDefault [] service.sId supportedFormats
-    , request = service.request {headers = M.fromList (M.findWithDefault [] service.sId headers)}
-    }
+withExports :: M.Map String [SettingsSubmissionExport] -> SettingsSubmissionDefinition -> SettingsSubmissionDefinition
+withExports exports definition = definition {exports = M.findWithDefault [] definition.sId exports}
 
-groupByServiceId :: [Only String :. a] -> M.Map String [a]
-groupByServiceId rows = M.fromListWith (flip (++)) [(serviceId, [row]) | Only serviceId :. row <- rows]
+groupByDefinitionId :: [Only String :. a] -> M.Map String [a]
+groupByDefinitionId rows = M.fromListWith (flip (++)) [(definitionId, [row]) | Only definitionId :. row <- rows]
 
 saveSettingsSubmission :: WizardRequestContextC s m => U.UUID -> Maybe U.UUID -> SettingsSubmission -> m ()
 saveSettingsSubmission tenantUuid mWorkspaceUuid settings = do
   let key = scopedKey table tenantUuid mWorkspaceUuid
   saveSettingsRow ["enabled"] key settings
   forM_ childTables (deleteSettingsRowsByKey . (`childKey` key))
-  forM_ settings.services $ \service -> do
-    insertSettingsRow serviceColumns (childKey serviceTable key) service
-    let serviceKey = withServiceId service.sId key
-    forM_ service.supportedFormats (insertSettingsRow ["id", "version", "format_name"] (childKey supportedFormatTable serviceKey))
-    forM_ (M.toList service.request.headers) (insertSettingsRow ["name", "value"] (childKey headerTable serviceKey))
+  forM_ (zip [0 :: Int ..] settings.definitions) $ \(position, definition) -> do
+    insertSettingsRow ("position" : definitionColumns) (childKey definitionTable key) (toField position : toRow definition)
+    let definitionKey = withDefinitionId definition.sId key
+    forM_ (zip [0 :: Int ..] definition.exports) $ \(exportPosition, export) ->
+      insertSettingsRow ("position" : exportColumns) (childKey exportTable definitionKey) (toField exportPosition : toRow export)
 
-withServiceId :: String -> SettingsKey -> SettingsKey
-withServiceId serviceId key = key {columns = key.columns ++ [("service_id", toField serviceId)]}
+withDefinitionId :: String -> SettingsKey -> SettingsKey
+withDefinitionId definitionId key = key {columns = key.columns ++ [("definition_id", toField definitionId)]}

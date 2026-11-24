@@ -13,6 +13,7 @@ import Shared.Database.DAO.Settings.SettingsRolesDAO
 import Shared.Database.DAO.Settings.SettingsSubmissionDAO
 import Shared.Database.DAO.Settings.SettingsSupportDAO
 import Shared.Database.DAO.Settings.SettingsUsersDAO
+import Shared.Database.DAO.Settings.SettingsZenodoDAO
 import Shared.Model.Context.WizardRequestContext
 import Shared.Model.Settings.Settings
 import Shared.Model.Settings.SettingsDM
@@ -30,3 +31,4 @@ createSettings tenantUuid defaultRoleUuid = do
   saveSettingsProjects tenantUuid Nothing defaultSettingsProjects
   saveSettingsSupport tenantUuid Nothing defaultSettingsSupport
   saveSettingsSubmission tenantUuid Nothing defaultSettingsSubmission
+  saveSettingsZenodo tenantUuid defaultSettingsZenodo

@@ -76,16 +76,16 @@ test_200 requestContext = do
     ( Page
         "documents"
         (PageMetadata 20 3 1 0)
-        [ toDTOWithDocTemplate doc1 project1 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
-        , toDTOWithDocTemplate doc2 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
-        , toDTOWithDocTemplate doc3 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
+        [ toDTOWithDocTemplate doc1 project1 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
+        , toDTOWithDocTemplate doc2 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
+        , toDTOWithDocTemplate doc3 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
         ]
     )
   create_test_200
     "HTTP 200 OK (query)"
     requestContext
     "/api/documents?q=My exported document 2"
-    (Page "documents" (PageMetadata 20 1 1 0) [toDTOWithDocTemplate doc2 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple])
+    (Page "documents" (PageMetadata 20 1 1 0) [toDTOWithDocTemplate doc2 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple])
   create_test_200
     "HTTP 200 OK (query for non-existing)"
     requestContext
@@ -98,9 +98,9 @@ test_200 requestContext = do
     ( Page
         "documents"
         (PageMetadata 20 3 1 0)
-        [ toDTOWithDocTemplate doc1 project1 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
-        , toDTOWithDocTemplate doc2 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
-        , toDTOWithDocTemplate doc3 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
+        [ toDTOWithDocTemplate doc1 project1 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
+        , toDTOWithDocTemplate doc2 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
+        , toDTOWithDocTemplate doc3 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
         ]
     )
 
@@ -137,9 +137,9 @@ test_200_workspace requestContext = do
     ( Page
         "documents"
         (PageMetadata 20 4 1 0)
-        [ toDTOWithDocTemplate doc1 project1 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
-        , toDTOWithDocTemplate doc2 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
-        , toDTOWithDocTemplate doc3 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
+        [ toDTOWithDocTemplate doc1 project1 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
+        , toDTOWithDocTemplate doc2 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
+        , toDTOWithDocTemplate doc3 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
         , secondWorkspaceDocDto
         ]
     )
@@ -163,9 +163,9 @@ test_200_workspace requestContext = do
     ( Page
         "documents"
         (PageMetadata 20 3 1 0)
-        [ toDTOWithDocTemplate doc1 project1 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
-        , toDTOWithDocTemplate doc2 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
-        , toDTOWithDocTemplate doc3 project2 (Just "Version 1") [] wizardDocumentTemplate formatJsonSimple
+        [ toDTOWithDocTemplate doc1 project1 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
+        , toDTOWithDocTemplate doc2 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
+        , toDTOWithDocTemplate doc3 project2 (Just "Version 1") wizardDocumentTemplate formatJsonSimple
         ]
     )
 
@@ -195,7 +195,7 @@ create_test_200_workspace title requestContext prepareWorkspace reqUrl expDto =
       response `shouldRespondWith` responseMatcher
 
 secondWorkspaceDocDto :: DocumentDTO
-secondWorkspaceDocDto = toDTOWithDocTemplate secondWorkspaceDoc project16 Nothing [] wizardDocumentTemplate formatJsonSimple
+secondWorkspaceDocDto = toDTOWithDocTemplate secondWorkspaceDoc project16 Nothing wizardDocumentTemplate formatJsonSimple
 
 -- ----------------------------------------------------
 -- ----------------------------------------------------

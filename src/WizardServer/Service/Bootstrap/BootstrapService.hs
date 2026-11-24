@@ -14,6 +14,7 @@ import Shared.Database.DAO.Settings.SettingsRegistryDAO
 import Shared.Database.DAO.Settings.SettingsSubmissionDAO
 import Shared.Database.DAO.Settings.SettingsSupportDAO
 import Shared.Database.DAO.Settings.SettingsUsersDAO
+import Shared.Database.DAO.Settings.SettingsZenodoDAO
 import Shared.Database.DAO.Tenant.WizardTenantDAO
 import Shared.Database.DAO.User.UserTourDAO
 import Shared.Model.Config.ServerConfig
@@ -60,6 +61,7 @@ getBootstrapSettings tenantUuid = do
   lookAndFeel <- getSettingsByTenantUuid findSettingsLookAndFeel tenantUuid
   users <- getSettingsByTenantUuid findSettingsUsers tenantUuid
   registry <- getSettingsByTenantUuid findSettingsRegistry tenantUuid
+  zenodo <- getSettingsByTenantUuid findSettingsZenodo tenantUuid
   return BootstrapSettings {..}
 
 getBootstrapUserProfile :: WizardRequestContextC s m => U.UUID -> m (Maybe UserProfile)

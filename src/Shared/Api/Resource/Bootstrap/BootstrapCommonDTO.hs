@@ -6,6 +6,7 @@ import qualified Data.UUID as U
 import GHC.Generics
 
 import Shared.Model.Plugin.PluginList
+import Shared.Model.Settings.Settings
 
 data BootstrapPrivacyDTO = BootstrapPrivacyDTO
   { privacyUrl :: Maybe String
@@ -16,6 +17,12 @@ data BootstrapPrivacyDTO = BootstrapPrivacyDTO
 data BootstrapCloudDTO = BootstrapCloudDTO
   { enabled :: Bool
   , serverUrl :: String
+  }
+  deriving (Generic, Eq, Show)
+
+data BootstrapSubmissionDTO = BootstrapSubmissionDTO
+  { enabled :: Bool
+  , zenodoRepositories :: [ZenodoRepository]
   }
   deriving (Generic, Eq, Show)
 

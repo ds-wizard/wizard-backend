@@ -1,12 +1,11 @@
 module Shared.Model.Automation.AutomationHook where
 
-import Shared.Model.Document.Document
 import Shared.Model.KnowledgeModel.Package.KnowledgeModelPackage
 import Shared.Model.Project.Project
 
 data AutomationHook
   = ProjectCreateHook Project
-  | DocumentSubmitHook Document String
+  | ProjectSubmitHook Project String
   | KnowledgeModelPublishHook KnowledgeModelPackage
   deriving (Show)
 

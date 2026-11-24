@@ -18,6 +18,7 @@ import Shared.Database.Migration.Development.Plugin.Data.PluginSettings
 import Shared.Database.Migration.Development.Plugin.Data.Plugins
 import Shared.Database.Migration.Development.Plugin.Data.TenantPluginSettings
 import Shared.Database.Migration.Development.Settings.Data.Settings
+import Shared.Model.Settings.SettingsDM
 import Shared.Database.Migration.Development.Tenant.Data.WizardTenants
 import Shared.Database.Migration.Development.User.Data.WizardUsers
 import qualified Shared.Database.Migration.Development.User.UserMigration as U
@@ -63,6 +64,7 @@ bootstrapSettings =
     , lookAndFeel = settingsLookAndFeel
     , users = settingsUsers
     , registry = settingsRegistry
+    , zenodo = defaultSettingsZenodo
     }
 
 -- ----------------------------------------------------

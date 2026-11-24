@@ -30,7 +30,7 @@ import Shared.Database.Migration.Development.Tenant.Data.WizardTenants
 import qualified Shared.Database.Migration.Development.User.UserMigration as U
 import Shared.Database.Migration.Development.Workspace.Data.Workspaces
 import Shared.Localization.Messages.Workspace.Public
-import Shared.Model.Config.SimpleFeature
+import Shared.Api.Resource.Bootstrap.BootstrapCommonDTO
 import Shared.Model.Error.Error
 import Shared.Model.Plugin.Plugin
 import Shared.Model.Plugin.WorkspacePluginSettings
@@ -78,7 +78,7 @@ expDto =
     , dashboardAndMenu = settingsDashboardAndMenu
     , projects = settingsProjects
     , support = settingsSupport
-    , submission = SimpleFeature True
+    , submission = BootstrapSubmissionDTO True []
     , disabledPlugins = []
     , pluginSettings = M.empty
     }

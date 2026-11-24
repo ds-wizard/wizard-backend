@@ -17,6 +17,7 @@ defaultConfig =
     , auditLog = defaultAuditLog
     , cache = defaultCache
     , document = defaultDocument
+    , submission = defaultSubmission
     , externalLink = defaultExternalLink
     , knowledgeModelEditor = defaultKnowledgeModelEditor
     , project = defaultProject
@@ -84,6 +85,13 @@ defaultDocument = ServerConfigDocument {clean = defaultDocumentClean}
 defaultDocumentClean :: ServerConfigCronWorker
 defaultDocumentClean =
   ServerConfigCronWorker {enabled = True, cron = "0 */4 * * *"}
+
+defaultSubmission :: ServerConfigSubmission
+defaultSubmission =
+  ServerConfigSubmission
+    { timeoutInMinutes = 60
+    , timeoutJob = ServerConfigCronWorker {enabled = True, cron = "*/10 * * * *"}
+    }
 
 defaultKnowledgeModelEditor :: ServerConfigKnowledgeModelEditor
 defaultKnowledgeModelEditor = ServerConfigKnowledgeModelEditor {squash = defaultKnowledgeModelEditorSquash}

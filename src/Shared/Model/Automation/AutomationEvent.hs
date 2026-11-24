@@ -27,8 +27,8 @@ data AutomationEvent
   | ProjectFileDeletedEvent Project ProjectFile
   | DocumentCreatedEvent Document
   | DocumentDeletedEvent Document
-  | DocumentSubmittedEvent Document Submission
-  | DocumentSubmissionFailedEvent Document Submission (Maybe String)
+  | ProjectSubmittedEvent Project Submission
+  | ProjectSubmissionFailedEvent Project Submission (Maybe String)
   | KnowledgeModelPublishedEvent KnowledgeModelPackage PackageSource
   | KnowledgeModelDeprecatedEvent KnowledgeModelPackage
   | KnowledgeModelDeletedEvent KnowledgeModelPackage
